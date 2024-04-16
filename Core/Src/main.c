@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "Log.h"
 #include "RobotArm.h"
 /* USER CODE END Includes */
 
@@ -46,7 +47,7 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 #define UART_BUFFER_SIZE (64)
 
-volatile uint8_t uartRxData;
+uint8_t uartRxData;
 volatile uint8_t uartRxBuffer[UART_BUFFER_SIZE];
 volatile int uartBuffWIndex = 0;
 int uartBuffRIndex = 0;
@@ -57,7 +58,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void uartRxHandler();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -100,8 +101,9 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  setupHandler(&huart1);
   HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
-  setup(&huart1);
+  setup();
 
   while (1)
   {

@@ -2,6 +2,7 @@
 #define INC_ROBOTARM_H_
 
 #include "main.h"
+#include "Log.h"
 
 #ifdef __cplusplus
 #define EXTERNC extern "C"
@@ -9,12 +10,9 @@
 #define EXTERNC
 #endif
 
-EXTERNC void print(const char *data);
-EXTERNC void println(const char *data);
-
 EXTERNC void uartRxEvent(char ch);
 
-EXTERNC void setup(UART_HandleTypeDef *huart);
+EXTERNC void setup();
 EXTERNC void loop();
 
 #endif /* INC_ROBOTARM_H_ */
