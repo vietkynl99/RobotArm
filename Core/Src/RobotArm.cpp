@@ -22,10 +22,25 @@ void uartRxEvent(char ch)
     CommandLine::onCharacterReceived(ch);
 }
 
+bool onCommandReboot(string params)
+{
+    if (!params.empty())
+    {
+        return false;
+    }
+    println("Rebooting...");
+    HAL_NVIC_SystemReset();
+    return true;
+}
+
 void setup()
 {
-    println("Robot Arm");
+    println("");
+    println("*****************");
+    println("*** Robot Arm ***");
+    println("*****************");
     CommandLine::init();
+    CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
 
     blinkLed(LED_GPIO_Port, LED_Pin, 3);
 }
