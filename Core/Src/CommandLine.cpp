@@ -19,7 +19,7 @@ void CommandLine::init()
     install("clear", onCommandClearScreen, "clear\t: clear screen");
     install("help", onCommandHelp, "help\t: show available commands\r\nhelp [command]\t: show command's description");
 
-    print(COMMAND_HEADER);
+    usbPrint(COMMAND_HEADER);
 }
 
 bool CommandLine::install(string name, CommandCallback callback, string description)
@@ -46,14 +46,14 @@ void CommandLine::onCharacterReceived(char ch)
     {
         handled = true;
         inputStr = "";
-        println("^C");
+        usbPrintln("^C");
     }
     else if (ch == INPUT_CODE_BACKSPACE)
     {
         if (inputStr.length() > 0)
         {
             inputStr.pop_back();
-            print(ESCAPE_CODE_BACKSAPCE);
+            usbPrint(ESCAPE_CODE_BACKSAPCE);
         }
     }
     else if (ch == INPUT_CODE_TAB)
@@ -75,16 +75,16 @@ void CommandLine::onCharacterReceived(char ch)
                         if (suffix.length() > 0)
                         {
                             inputStr += suffix;
-                            print(suffix.c_str());
+                            usbPrint(suffix.c_str());
                         }
                         else if (hasPrevTab)
                         {
-                            println("");
-                            print(" ");
-                            print(vector2string(list).c_str());
-                            println("");
-                            print(COMMAND_HEADER);
-                            print(inputStr.c_str());
+                            usbPrintln("");
+                            usbPrint(" ");
+                            usbPrint(vector2string(list).c_str());
+                            usbPrintln("");
+                            usbPrint(COMMAND_HEADER);
+                            usbPrint(inputStr.c_str());
                         }
                     }
                 }
@@ -95,20 +95,17 @@ void CommandLine::onCharacterReceived(char ch)
     else if (ch == '\r' || ch == '\n')
     {
         handled = true;
-        println("");
+        usbPrintln("");
     }
     else if (ch >= ' ' && ch <= '~')
     {
         inputStr += ch;
-        char buff[2] = {ch, '\0'};
-        print(buff);
+        usbPrint("%c", ch);
     }
 #if DEBUG_SHOW_UNKNOWN_CODE
     else
     {
-        char buffer[8];
-        snprintf(buffer, sizeof(buffer), "{0x%d}", ch);
-        print(buffer);
+        usbPrint("{0x%d}", ch);
     }
 #endif
 
@@ -145,22 +142,22 @@ void CommandLine::onCharacterReceived(char ch)
                 if (!command.callback(commandParams))
                 {
                     string str = "Invalid usage of command '" + command.name + "'";
-                    println(str.c_str());
+                    usbPrintln(str.c_str());
                     str = "Show command's description: help " + command.name;
-                    println(str.c_str());
+                    usbPrintln(str.c_str());
                 }
             }
         }
         if (!found)
         {
             string str = "Unknown command '" + commandName + "'";
-            println(str.c_str());
+            usbPrintln(str.c_str());
         }
     }
 
     hasPrevTab = false;
     inputStr = "";
-    print(COMMAND_HEADER);
+    usbPrint(COMMAND_HEADER);
 }
 
 string CommandLine::trim(const string &str)
@@ -272,7 +269,7 @@ bool CommandLine::onCommandClearScreen(string params)
     {
         return false;
     }
-    print(ESCAPE_CODE_CLEAR);
+    usbPrint(ESCAPE_CODE_CLEAR);
     return true;
 }
 
@@ -285,9 +282,9 @@ bool CommandLine::onCommandHelp(string commandName)
 
     if (commandName.length() == 0)
     {
-        print("Available commands: ");
-        println(vector2string(getCommandList()).c_str());
-        println("Show command's description: help [command]");
+        usbPrint("Available commands: ");
+        usbPrintln(vector2string(getCommandList()).c_str());
+        usbPrintln("Show command's description: help [command]");
         return true;
     }
 
@@ -295,15 +292,15 @@ bool CommandLine::onCommandHelp(string commandName)
     if (!getCommandByName(command, commandName))
     {
         string str = "Unknown command: " + commandName;
-        println(str.c_str());
+        usbPrintln(str.c_str());
         return true;
     }
     if (command.description.length() == 0)
     {
         string str = "Command '" + commandName + "' has no description";
-        println(str.c_str());
+        usbPrintln(str.c_str());
         return true;
     }
-    println(command.description.c_str());
+    usbPrintln(command.description.c_str());
     return true;
 }

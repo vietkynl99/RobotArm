@@ -19,12 +19,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "Log.h"
 #include "RobotArm.h"
+#include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,12 +50,6 @@ TIM_HandleTypeDef htim3;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-#define UART_BUFFER_SIZE (64)
-
-uint8_t uartRxData;
-volatile uint8_t uartRxBuffer[UART_BUFFER_SIZE];
-volatile int uartBuffWIndex = 0;
-int uartBuffRIndex = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,15 +98,15 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  // UART
-  setupHandler(&huart1);
-  HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
+  // UART Log
+  setUartLogHandler(&huart1);
 
   //PWM
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -126,7 +122,7 @@ int main(void)
 
   while (1)
   {
-    uartRxHandler();
+	CDC_loop();
     loop();
     /* USER CODE END WHILE */
 
@@ -143,6 +139,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -168,6 +165,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
@@ -368,33 +371,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-  if (huart->Instance == USART1)
-  {
-    uartBuffWIndex++;
-    if (uartBuffWIndex >= UART_BUFFER_SIZE)
-    {
-      uartBuffWIndex = 0;
-    }
-    uartRxBuffer[uartBuffWIndex] = uartRxData;
-    HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
-  }
-}
-
-void uartRxHandler()
-{
-  if (uartBuffRIndex != uartBuffWIndex)
-  {
-    uartBuffRIndex++;
-    if (uartBuffRIndex >= UART_BUFFER_SIZE)
-    {
-      uartBuffRIndex = 0;
-    }
-    onUartDataReceived(uartRxBuffer[uartBuffRIndex]);
-  }
-}
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   onGpioExt(GPIO_Pin);
