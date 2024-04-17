@@ -122,7 +122,7 @@ int main(void)
 
   while (1)
   {
-	CDC_loop();
+    CDC_loop();
     loop();
     /* USER CODE END WHILE */
 

@@ -104,7 +104,6 @@ void setup(TIM_HandleTypeDef *htim)
 {
     mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, MOTOR_SAMPLE_TIME_S, MOTOR_ENCODER_RESOLUTION);
 
-    usbPrintln("\r\n*****************\r\n*** Robot Arm ***\r\n*****************");
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
     CommandLine::install("servo-get-current-position", onCommandGetCurrentPosition);
