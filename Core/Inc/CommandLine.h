@@ -29,8 +29,6 @@ public:
     static bool install(string name, CommandCallback callback, string description = "");
 
 private:
-    static void putstr(const char* str);
-    static void putstrln(const char* str);
     static string trim(const string &str);
     static bool isSingleName(const string &name);
     static Vector<string> getCommandList(string prefix = "");
