@@ -8,9 +8,12 @@
 using namespace std;
 
 #define MOTOR_SAMPLE_TIME_S (1E-3)   // must matched with timer interrupt
+#define MOTOR_PWM_RESOLUTION (999) // must matched with timer pwm generator
 #define MOTOR_ENCODER_RESOLUTION (2) // pulse per revolution
+#define MOTOR_LOG_INTERVAL_MS (50)
 
 Servo *mServo;
+bool mLogEnabled = false;
 
 void blinkLed(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, int count)
 {
@@ -100,9 +103,27 @@ bool onCommandTest(string params)
     return true;
 }
 
+bool onCommandLog(string params)
+{
+    if (params == "on")
+    {
+        mLogEnabled = true;
+        return true;
+    }
+    else if (params == "off")
+    {
+        mLogEnabled = false;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 void setup(TIM_HandleTypeDef *htim)
 {
-    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, MOTOR_SAMPLE_TIME_S, MOTOR_ENCODER_RESOLUTION);
+    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, MOTOR_SAMPLE_TIME_S, MOTOR_ENCODER_RESOLUTION, MOTOR_PWM_RESOLUTION);
 
     println("");
     println("*****************");
@@ -110,14 +131,22 @@ void setup(TIM_HandleTypeDef *htim)
     println("*****************");
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
-    CommandLine::install("servo-get-current-position", onCommandGetCurrentPosition);
+    CommandLine::install("log", onCommandLog, "log [on/off]\t: turn on/off servo motor log");
+    CommandLine::install("servo-position", onCommandGetCurrentPosition);
     CommandLine::install("servo-setpoint", onCommandSetpoint);
     CommandLine::install("servo-reset", onCommandResetServo);
-    CommandLine::install("test", onCommandTest);
+    CommandLine::install("servo-test", onCommandTest);
 
     blinkLed(LED_GPIO_Port, LED_Pin, 3);
 }
 
 void loop()
 {
+    static uint32_t timeTick = 0;
+
+    if (mLogEnabled && HAL_GetTick() > timeTick)
+    {
+        timeTick = HAL_GetTick() + MOTOR_LOG_INTERVAL_MS;
+        printlnLog("%.2f %.2f %.2f", mServo->getRequestedPosition(), mServo->getCurrentPosition(), mServo->getControlValue() / MOTOR_PWM_RESOLUTION);
+    }
 }

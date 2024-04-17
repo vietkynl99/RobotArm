@@ -21,7 +21,7 @@ private:
     uint16_t mOutputTimerCh2;
 
 public:
-    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double sampleTime, uint16_t pulsePerRev);
+    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double sampleTime, uint16_t pulsePerRev, uint16_t pwmResolution);
     ~Servo();
 
     void onEncoderEvent(bool direction);
@@ -30,6 +30,7 @@ public:
     void requestPosition(double postion);
     double getRequestedPosition();
     double getCurrentPosition();
+    double getControlValue();
 
 private:
 };

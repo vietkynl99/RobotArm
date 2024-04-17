@@ -1,8 +1,7 @@
 #include "Servo.h"
-
 #include <stdio.h>
 
-Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double sampleTime, uint16_t pulsePerRev)
+Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double sampleTime, uint16_t pulsePerRev, uint16_t pwmResolution)
 {
     // The motor rotates 100 revolutions and the shaft will rotate 360 ​​degrees.
     // double gearRatio = 360.0 / 100;
@@ -17,13 +16,23 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
     double ki = 0;
     double kd = 0;
     PidParams params{kp / gearRatio, ki / gearRatio, kd / gearRatio};
-    mPidController = new PidController(&mError, &mOutput, sampleTime, params, 0, 999);
+    mPidController = new PidController(&mError, &mOutput, sampleTime, params, 0, pwmResolution);
 
     reset();
 }
 
 Servo::~Servo()
 {
+    if (mPidController)
+    {
+        delete mPidController;
+        mPidController = nullptr;
+    }
+    if (mOutputTimer)
+    {
+        delete mOutputTimer;
+        mOutputTimer = nullptr;
+    }
 }
 
 void Servo::onEncoderEvent(bool direction)
@@ -69,4 +78,9 @@ double Servo::getRequestedPosition()
 double Servo::getCurrentPosition()
 {
     return mEncoderPulse * mEncoderResolution;
+}
+
+double Servo::getControlValue()
+{
+    return mOutput;
 }
