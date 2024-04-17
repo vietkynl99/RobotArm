@@ -1,10 +1,16 @@
 #include "RobotArm.h"
 #include "CommandLine.h"
+#include "Servo.h"
 
 #include <string>
 #include <cstring>
 
 using namespace std;
+
+#define MOTOR_SAMPLE_TIME_S (1E-3)   // must matched with timer interrupt
+#define MOTOR_ENCODER_RESOLUTION (2) // pulse per revolution
+
+Servo *mServo;
 
 void blinkLed(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, int count)
 {
@@ -17,9 +23,28 @@ void blinkLed(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, int count)
     }
 }
 
-void uartRxEvent(char ch)
+void onUartDataReceived(char ch)
 {
     CommandLine::onCharacterReceived(ch);
+}
+
+void onGpioExt(uint16_t pin)
+{
+    if (pin == MOTOR1_E1_Pin)
+    {
+        if (mServo)
+        {
+            mServo->onEncoderEvent(true);
+        }
+    }
+}
+
+void onControllerInterrupt()
+{
+    if (mServo)
+    {
+        mServo->run();
+    }
 }
 
 bool onCommandReboot(string params)
@@ -33,14 +58,66 @@ bool onCommandReboot(string params)
     return true;
 }
 
-void setup()
+bool onCommandGetCurrentPosition(string params)
 {
+    if (mServo)
+    {
+        char buff[32];
+        snprintf(buff, sizeof(buff), "Current position: %.2f", (float)mServo->getCurrentPosition());
+        println(buff);
+    }
+    return true;
+}
+
+bool onCommandSetpoint(string params)
+{
+    if (mServo)
+    {
+        long value = stoi(params);
+        string str = "Set setpoint to " + to_string(value);
+        println(str.c_str());
+        mServo->requestPosition(value);
+    }
+    return true;
+}
+
+bool onCommandResetServo(string params)
+{
+    if (mServo)
+    {
+        mServo->reset();
+    }
+    return true;
+}
+
+bool onCommandTest(string params)
+{
+    if (mServo)
+    {
+        mServo->reset();
+
+        long value = stoi(params);
+        string str = "Set setpoint to " + to_string(value);
+        println(str.c_str());
+        mServo->requestPosition(value);
+    }
+    return true;
+}
+
+void setup(TIM_HandleTypeDef *htim)
+{
+    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, MOTOR_SAMPLE_TIME_S, MOTOR_ENCODER_RESOLUTION);
+
     println("");
     println("*****************");
     println("*** Robot Arm ***");
     println("*****************");
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
+    CommandLine::install("servo-get-current-position", onCommandGetCurrentPosition);
+    CommandLine::install("servo-setpoint", onCommandSetpoint);
+    CommandLine::install("servo-reset", onCommandResetServo);
+    CommandLine::install("test", onCommandTest);
 
     blinkLed(LED_GPIO_Port, LED_Pin, 3);
 }

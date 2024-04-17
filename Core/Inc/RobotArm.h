@@ -10,9 +10,11 @@
 #define EXTERNC
 #endif
 
-EXTERNC void uartRxEvent(char ch);
+EXTERNC void onUartDataReceived(char ch);
+EXTERNC void onGpioExt(uint16_t pin);
+EXTERNC void onControllerInterrupt();
 
-EXTERNC void setup();
+EXTERNC void setup(TIM_HandleTypeDef *htim);
 EXTERNC void loop();
 
 #endif /* INC_ROBOTARM_H_ */
