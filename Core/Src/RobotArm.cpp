@@ -62,9 +62,7 @@ bool onCommandGetCurrentPosition(string params)
 {
     if (mServo)
     {
-        char buff[32];
-        snprintf(buff, sizeof(buff), "Current position: %.2f", (float)mServo->getCurrentPosition());
-        println(buff);
+        println("Current position: %.2f", (float)mServo->getCurrentPosition());
     }
     return true;
 }
@@ -74,8 +72,7 @@ bool onCommandSetpoint(string params)
     if (mServo)
     {
         long value = stoi(params);
-        string str = "Set setpoint to " + to_string(value);
-        println(str.c_str());
+        println("Set setpoint to %d", value);
         mServo->requestPosition(value);
     }
     return true;
@@ -97,8 +94,7 @@ bool onCommandTest(string params)
         mServo->reset();
 
         long value = stoi(params);
-        string str = "Set setpoint to " + to_string(value);
-        println(str.c_str());
+        println("Set setpoint to %d", value);
         mServo->requestPosition(value);
     }
     return true;

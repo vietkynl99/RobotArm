@@ -109,7 +109,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   // UART
-  setupHandler(&huart1);
+  setUartLogHandler(&huart1);
   HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
 
   //PWM

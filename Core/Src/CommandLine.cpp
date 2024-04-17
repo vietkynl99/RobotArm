@@ -100,8 +100,7 @@ void CommandLine::onCharacterReceived(char ch)
     else if (ch >= ' ' && ch <= '~')
     {
         inputStr += ch;
-        char buff[2] = {ch, '\0'};
-        print(buff);
+        print("%c", ch);
     }
 #if DEBUG_SHOW_UNKNOWN_CODE
     else
@@ -144,17 +143,14 @@ void CommandLine::onCharacterReceived(char ch)
                 found = true;
                 if (!command.callback(commandParams))
                 {
-                    string str = "Invalid usage of command '" + command.name + "'";
-                    println(str.c_str());
-                    str = "Show command's description: help " + command.name;
-                    println(str.c_str());
+                    println("Invalid usage of command '%s'", command.name.c_str());
+                    println("Show command's description: help %s", command.name.c_str());
                 }
             }
         }
         if (!found)
         {
-            string str = "Unknown command '" + commandName + "'";
-            println(str.c_str());
+            println("Unknown command '%s'", commandName.c_str());
         }
     }
 
@@ -285,8 +281,7 @@ bool CommandLine::onCommandHelp(string commandName)
 
     if (commandName.length() == 0)
     {
-        print("Available commands: ");
-        println(vector2string(getCommandList()).c_str());
+        println("Available commands: %s", vector2string(getCommandList()).c_str());
         println("Show command's description: help [command]");
         return true;
     }
@@ -294,14 +289,12 @@ bool CommandLine::onCommandHelp(string commandName)
     Command command;
     if (!getCommandByName(command, commandName))
     {
-        string str = "Unknown command: " + commandName;
-        println(str.c_str());
+        println("Unknown command: %s", commandName.c_str());
         return true;
     }
     if (command.description.length() == 0)
     {
-        string str = "Command '" + commandName + "' has no description";
-        println(str.c_str());
+        println("Command %s has no description", commandName.c_str());
         return true;
     }
     println(command.description.c_str());

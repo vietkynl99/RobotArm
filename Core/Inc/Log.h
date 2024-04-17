@@ -9,9 +9,9 @@
 #define EXTERNC
 #endif
 
-EXTERNC void setupHandler(UART_HandleTypeDef *huart);
+EXTERNC void setUartLogHandler(UART_HandleTypeDef *huart);
 
-EXTERNC void print(const char *data);
-EXTERNC void println(const char *data);
+EXTERNC void print(const char *pFormat, ...);
+EXTERNC void println(const char *pFormat, ...);
 
 #endif /* INC_LOG_H_ */
