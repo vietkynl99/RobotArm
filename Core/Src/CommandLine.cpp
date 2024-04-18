@@ -40,6 +40,7 @@ void CommandLine::onCharacterReceived(char ch)
     static bool handled = 0;
     static string inputStr = "";
     static bool hasPrevTab = false;
+    static char prev2Ch = '\0', prevCh = '\0';
 
     handled = false;
     if (ch == INPUT_CODE_CANCEL)
@@ -92,6 +93,12 @@ void CommandLine::onCharacterReceived(char ch)
         }
         hasPrevTab = true;
     }
+    else if (prevCh == INPUT_CODE_ESC)
+    {
+    }
+    else if (prev2Ch == INPUT_CODE_ESC)
+    {
+    }
     else if (ch == '\r' || ch == '\n')
     {
         handled = true;
@@ -110,6 +117,8 @@ void CommandLine::onCharacterReceived(char ch)
         print(buffer);
     }
 #endif
+    prev2Ch = prevCh;
+    prevCh = ch;
 
     if (!handled)
     {
