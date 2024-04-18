@@ -5,7 +5,7 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
 {
     // The motor rotates 100 revolutions and the shaft will rotate 360 ​​degrees.
     // double gearRatio = 360.0 / 100;
-    double gearRatio = 1.0 / 100;
+    double gearRatio = 1.0 / 98.75;
 
     mOutputTimer = outputTimer;
     mOutputTimerCh1 = outputTimerCh1;

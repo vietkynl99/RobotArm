@@ -12,7 +12,7 @@ private:
     double mError;
     double mFeedback;
 
-    uint64_t mEncoderPulse;
+    int64_t mEncoderPulse;
     double mEncoderResolution;
 
     PidController *mPidController;

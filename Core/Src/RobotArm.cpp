@@ -65,7 +65,7 @@ bool onCommandGetCurrentPosition(string params)
 {
     if (mServo)
     {
-        println("Current position: %.2f", (float)mServo->getCurrentPosition());
+        println("Current position: %.6f", (float)mServo->getCurrentPosition());
     }
     return true;
 }
