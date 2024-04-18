@@ -48,3 +48,6 @@
 *.su
 *.idb
 *.pdb
+
+# Tmp files
+.mxproject
