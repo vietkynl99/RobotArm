@@ -1,5 +1,5 @@
 #ifndef INC_DELAY_TRANSFER_FUNCTION_H_
-#define INC_DELAY_TRANSFER_FUNCTION_H
+#define INC_DELAY_TRANSFER_FUNCTION_H_
 
 #include "ZTransferFunction.h"
 
