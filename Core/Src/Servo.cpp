@@ -3,9 +3,8 @@
 
 Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double sampleTime, uint16_t pulsePerRev, uint16_t pwmResolution)
 {
-    // The motor rotates 100 revolutions and the shaft will rotate 360 ​​degrees.
-    // double gearRatio = 360.0 / 100;
-    double gearRatio = 1.0 / 98.775;
+    // The motor rotates 98.775 revolutions and the shaft will rotate 360 ​​degrees.
+    double gearRatio = 360.0 / 98.775;
 
     mOutputTimer = outputTimer;
     mOutputTimerCh1 = outputTimerCh1;
@@ -65,21 +64,25 @@ void Servo::reset()
     mPidController->reset();
 }
 
+// Unit: degree
 void Servo::requestPosition(double postion)
 {
     mSetpoint = postion;
 }
 
+// Unit: degree
 double Servo::getRequestedPosition()
 {
     return mSetpoint;
 }
 
+// Unit: degree
 double Servo::getCurrentPosition()
 {
     return mEncoderPulse * mEncoderResolution;
 }
 
+// Range: [-MOTOR_PWM_RESOLUTION, MOTOR_PWM_RESOLUTION]
 double Servo::getControlValue()
 {
     return mOutput;
