@@ -4,6 +4,7 @@
 #include "main.h"
 #include "RobotArm.h"
 #include "Vector.h"
+#include "FiFoBuffer.h"
 
 #include <string>
 
@@ -21,6 +22,7 @@ class CommandLine
 {
 private:
     static Vector<Command> mCommandList;
+    static FiFoBuffer<string> mPrevInputList;
 
 public:
     static void init();

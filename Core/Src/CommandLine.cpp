@@ -9,10 +9,14 @@
 
 #define ESCAPE_CODE_CLEAR "\033c"
 #define ESCAPE_CODE_BACKSAPCE "\x7f"
+#define ESCAPE_CODE_ERASE_LINE "\033[2K\r"
+
+#define PREV_INPUT_LIST_SIZE 10
 
 #define DEBUG_SHOW_UNKNOWN_CODE 0
 
 Vector<Command> CommandLine::mCommandList;
+FiFoBuffer<string> CommandLine::mPrevInputList(PREV_INPUT_LIST_SIZE);
 
 void CommandLine::init()
 {
@@ -41,6 +45,7 @@ void CommandLine::onCharacterReceived(char ch)
     static string inputStr = "";
     static bool hasPrevTab = false;
     static char prev2Ch = '\0', prevCh = '\0';
+    static int inputIndex = -1;
 
     handled = false;
     if (ch == INPUT_CODE_CANCEL)
@@ -98,6 +103,32 @@ void CommandLine::onCharacterReceived(char ch)
     }
     else if (prev2Ch == INPUT_CODE_ESC)
     {
+        if (ch == 'A')
+        {
+            if (inputIndex < mPrevInputList.size() - 1)
+            {
+                inputIndex++;
+            }
+            if (mPrevInputList.get(mPrevInputList.size() - 1 - inputIndex, inputStr))
+            {
+                print(ESCAPE_CODE_ERASE_LINE);
+                print(COMMAND_HEADER);
+                print(inputStr.c_str());
+            }
+        }
+        else if (ch == 'B')
+        {
+            if (inputIndex > 0)
+            {
+                inputIndex--;
+            }
+            if (mPrevInputList.get(mPrevInputList.size() - 1 - inputIndex, inputStr))
+            {
+                print(ESCAPE_CODE_ERASE_LINE);
+                print(COMMAND_HEADER);
+                print(inputStr.c_str());
+            }
+        }
     }
     else if (ch == '\r' || ch == '\n')
     {
@@ -161,8 +192,14 @@ void CommandLine::onCharacterReceived(char ch)
         {
             println("Unknown command '%s'", commandName.c_str());
         }
+        string prevInput;
+        if (mPrevInputList.size() == 0 || (mPrevInputList.get(mPrevInputList.size() - 1, prevInput) && prevInput != inputStr))
+        {
+            mPrevInputList.push(inputStr);
+        }
     }
 
+    inputIndex = -1;
     hasPrevTab = false;
     inputStr = "";
     print(COMMAND_HEADER);
