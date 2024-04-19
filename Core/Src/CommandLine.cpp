@@ -103,25 +103,16 @@ void CommandLine::onCharacterReceived(char ch)
     }
     else if (prev2Ch == INPUT_CODE_ESC)
     {
-        if (ch == 'A')
+        if (ch == 'A' && inputIndex < mPrevInputList.size() - 1)
         {
-            if (inputIndex < mPrevInputList.size() - 1)
-            {
-                inputIndex++;
-            }
-            if (mPrevInputList.get(mPrevInputList.size() - 1 - inputIndex, inputStr))
-            {
-                print(ESCAPE_CODE_ERASE_LINE);
-                print(COMMAND_HEADER);
-                print(inputStr.c_str());
-            }
+            inputIndex++;
         }
-        else if (ch == 'B')
+        else if (ch == 'B' && inputIndex > 0)
         {
-            if (inputIndex > 0)
-            {
-                inputIndex--;
-            }
+            inputIndex--;
+        }
+        if (ch == 'A' || ch == 'B')
+        {
             if (mPrevInputList.get(mPrevInputList.size() - 1 - inputIndex, inputStr))
             {
                 print(ESCAPE_CODE_ERASE_LINE);
