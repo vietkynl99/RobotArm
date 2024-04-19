@@ -8,7 +8,7 @@
 using namespace std;
 
 #define MOTOR_SAMPLE_TIME_S (1E-3)   // must matched with timer interrupt
-#define MOTOR_PWM_RESOLUTION (999) // must matched with timer pwm generator
+#define MOTOR_PWM_RESOLUTION (999)   // must matched with timer pwm generator
 #define MOTOR_ENCODER_RESOLUTION (2) // pulse per revolution
 #define MOTOR_LOG_INTERVAL_MS (50)
 
@@ -107,7 +107,11 @@ bool onCommandLog(string params)
 {
     if (params == "on")
     {
-        mLogEnabled = true;
+        if (!mLogEnabled)
+        {
+            mLogEnabled = true;
+            printlnLog("RequestedPosition,CurrentPosition,ControlValue");
+        }
         return true;
     }
     else if (params == "off")
