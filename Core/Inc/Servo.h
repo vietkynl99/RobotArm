@@ -4,6 +4,10 @@
 #include "RobotArm.h"
 #include "PidController.h"
 
+#define SERVO_SAMPLE_TIME_S         (1E-3)  // must matched with timer interrupt
+#define SERVO_PWM_RESOLUTION        (999)   // must matched with timer pwm generator
+#define SERVO_ENCODER_RESOLUTION    (2)     // pulse per revolution
+
 class Servo
 {
 private:
@@ -21,7 +25,7 @@ private:
     uint16_t mOutputTimerCh2;
 
 public:
-    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double sampleTime, uint16_t pulsePerRev, uint16_t pwmResolution);
+    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double kp = 0, double ki = 0, double kd = 0);
     ~Servo();
 
     void onEncoderEvent(bool direction);

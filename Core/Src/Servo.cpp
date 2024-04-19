@@ -1,21 +1,17 @@
 #include "Servo.h"
 #include <stdio.h>
 
-Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double sampleTime, uint16_t pulsePerRev, uint16_t pwmResolution)
+Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double kp, double ki, double kd)
 {
-    // The motor rotates 98.775 revolutions and the shaft will rotate 360 ​​degrees.
-    double gearRatio = 360.0 / 98.775;
+    double resolution = 360 / gearRatio;
 
     mOutputTimer = outputTimer;
     mOutputTimerCh1 = outputTimerCh1;
     mOutputTimerCh2 = outputTimerCh2;
-    mEncoderResolution = gearRatio / pulsePerRev;
+    mEncoderResolution = resolution / SERVO_ENCODER_RESOLUTION;
 
-    double kp = 100;
-    double ki = 0;
-    double kd = 0;
-    PidParams params{kp / gearRatio, ki / gearRatio, kd / gearRatio};
-    mPidController = new PidController(&mError, &mOutput, sampleTime, params, 0, pwmResolution);
+    PidParams params{kp / resolution, ki / resolution, kd / resolution};
+    mPidController = new PidController(&mError, &mOutput, SERVO_SAMPLE_TIME_S, params, 0, SERVO_PWM_RESOLUTION);
 
     reset();
 }

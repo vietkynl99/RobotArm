@@ -7,10 +7,7 @@
 
 using namespace std;
 
-#define MOTOR_SAMPLE_TIME_S (1E-3)   // must matched with timer interrupt
-#define MOTOR_PWM_RESOLUTION (999)   // must matched with timer pwm generator
-#define MOTOR_ENCODER_RESOLUTION (2) // pulse per revolution
-#define MOTOR_LOG_INTERVAL_MS (50)
+#define SERVO_LOG_INTERVAL_MS (50)
 
 Servo *mServo;
 bool mLogEnabled = false;
@@ -127,7 +124,7 @@ bool onCommandPlot(string params)
 
 void setup(TIM_HandleTypeDef *htim)
 {
-    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, MOTOR_SAMPLE_TIME_S, MOTOR_ENCODER_RESOLUTION, MOTOR_PWM_RESOLUTION);
+    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, 50);
 
     println("");
     println("*****************");
@@ -150,7 +147,7 @@ void loop()
 
     if (mLogEnabled && HAL_GetTick() > timeTick)
     {
-        timeTick = HAL_GetTick() + MOTOR_LOG_INTERVAL_MS;
-        printlnLog("%.2f %.2f %.2f", mServo->getRequestedPosition(), mServo->getCurrentPosition(), 100*mServo->getControlValue() / MOTOR_PWM_RESOLUTION);
+        timeTick = HAL_GetTick() + SERVO_LOG_INTERVAL_MS;
+        printlnLog("%.2f %.2f %.2f", mServo->getRequestedPosition(), mServo->getCurrentPosition(), 100 * mServo->getControlValue() / SERVO_PWM_RESOLUTION);
     }
 }
