@@ -33,7 +33,7 @@ void onUartDataReceived(char ch)
 
 void onGpioExt(uint16_t pin)
 {
-    if (pin == MOTOR1_E1_Pin)
+    if (pin == M1_E1_Pin)
     {
         if (mServo)
         {
@@ -151,6 +151,6 @@ void loop()
     if (mLogEnabled && HAL_GetTick() > timeTick)
     {
         timeTick = HAL_GetTick() + MOTOR_LOG_INTERVAL_MS;
-        printlnLog("%.2f %.2f %.2f", mServo->getRequestedPosition(), mServo->getCurrentPosition(), mServo->getControlValue() / MOTOR_PWM_RESOLUTION);
+        printlnLog("%.2f %.2f %.2f", mServo->getRequestedPosition(), mServo->getCurrentPosition(), 100*mServo->getControlValue() / MOTOR_PWM_RESOLUTION);
     }
 }
