@@ -103,7 +103,7 @@ bool onCommandTest(string params)
     return true;
 }
 
-bool onCommandLog(string params)
+bool onCommandPlot(string params)
 {
     if (params == "on")
     {
@@ -135,7 +135,7 @@ void setup(TIM_HandleTypeDef *htim)
     println("*****************");
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
-    CommandLine::install("log", onCommandLog, "log [on/off]\t: turn on/off servo motor log");
+    CommandLine::install("plot", onCommandPlot, "plot [on/off]\t: turn on/off servo motor plotter");
     CommandLine::install("servo-position", onCommandGetCurrentPosition);
     CommandLine::install("servo-setpoint", onCommandSetpoint);
     CommandLine::install("servo-reset", onCommandResetServo);
