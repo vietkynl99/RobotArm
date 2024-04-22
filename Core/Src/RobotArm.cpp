@@ -34,7 +34,7 @@ void onGpioExt(uint16_t pin)
     {
         if (mServo)
         {
-            mServo->onEncoderEvent(true);
+            mServo->onEncoderEvent(!HAL_GPIO_ReadPin(M1_E2_GPIO_Port, M1_E2_Pin));
         }
     }
 }
@@ -124,7 +124,7 @@ bool onCommandPlot(string params)
 
 void setup(TIM_HandleTypeDef *htim)
 {
-    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, 50);
+    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, 30, 1);
 
     println("");
     println("*****************");

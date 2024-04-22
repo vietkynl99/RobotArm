@@ -13,6 +13,8 @@ PidController::PidController(double *inputPtr, double *outputPtr, double sampleT
     mLowLimit = lowLimit;
     mHighLimit = highLimit;
 
+    mPrevInput = 0;
+
     reset();
 }
 
@@ -32,7 +34,6 @@ PidController::~PidController()
 
 void PidController::reset()
 {
-    mPrevInput = 0;
     mIntegral = 0;
 }
 
@@ -44,6 +45,14 @@ void PidController::tune(PidParams params)
 void PidController::run()
 {
     mIntegral += *mInputPtr * mSampleTime;
+    if (mIntegral < mLowLimit)
+    {
+        mIntegral = mLowLimit;
+    }
+    if (mIntegral > mHighLimit)
+    {
+        mIntegral = mHighLimit;
+    }
 #if PID_KD_ENABLE
     *mOutputPtr = mPidParams.kp * *mInputPtr + mPidParams.ki * mIntegral + mPidParams.kd * (*mInputPtr - mPrevInput) / mSampleTime;
 #else

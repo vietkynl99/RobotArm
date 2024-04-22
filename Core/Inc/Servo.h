@@ -5,8 +5,10 @@
 #include "PidController.h"
 
 #define SERVO_SAMPLE_TIME_S         (1E-3)  // must matched with timer interrupt
-#define SERVO_PWM_RESOLUTION        (999)   // must matched with timer pwm generator
 #define SERVO_ENCODER_RESOLUTION    (2)     // pulse per revolution
+#define SERVO_PWM_RESOLUTION        (999)   // must matched with timer pwm generator
+#define SERVO_FIXED_PWN_OUT         (200)   // the minimum value of pwm that the motor can run
+#define SERVO_FIXED_PWN_IN          (2)     // the minimum value of pwm that the motor can run
 
 class Servo
 {
@@ -31,6 +33,7 @@ public:
     void onEncoderEvent(bool direction);
     void run();
     void reset();
+    double map(double input, double inMin, double inMax, double outMin, double outMax);
     void requestPosition(double postion);
     double getRequestedPosition();
     double getCurrentPosition();

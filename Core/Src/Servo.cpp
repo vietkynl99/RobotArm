@@ -11,7 +11,7 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
     mEncoderResolution = resolution / SERVO_ENCODER_RESOLUTION;
 
     PidParams params{kp / resolution, ki / resolution, kd / resolution};
-    mPidController = new PidController(&mError, &mOutput, SERVO_SAMPLE_TIME_S, params, 0, SERVO_PWM_RESOLUTION);
+    mPidController = new PidController(&mError, &mOutput, SERVO_SAMPLE_TIME_S, params, -SERVO_PWM_RESOLUTION, SERVO_PWM_RESOLUTION);
 
     reset();
 }
@@ -46,7 +46,31 @@ void Servo::run()
 {
     mError = mSetpoint - getCurrentPosition();
     mPidController->run();
-    __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, mOutput);
+
+    double fixedOutput = mOutput;
+    if (fixedOutput > -SERVO_FIXED_PWN_IN && fixedOutput < SERVO_FIXED_PWN_IN)
+    {
+        fixedOutput = map(fixedOutput, -SERVO_FIXED_PWN_IN, SERVO_FIXED_PWN_IN, -SERVO_FIXED_PWN_OUT, SERVO_FIXED_PWN_OUT);
+    }
+    else if (fixedOutput > 0)
+    {
+        fixedOutput = map(fixedOutput, SERVO_FIXED_PWN_IN, SERVO_PWM_RESOLUTION, SERVO_FIXED_PWN_OUT, SERVO_PWM_RESOLUTION);
+    }
+    else
+    {
+        fixedOutput = map(fixedOutput, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_IN, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_OUT);
+    }
+
+    if (fixedOutput > 0)
+    {
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, fixedOutput);
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, 0);
+    }
+    else
+    {
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, 0);
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, -fixedOutput);
+    }
 }
 
 void Servo::reset()
@@ -58,6 +82,20 @@ void Servo::reset()
     mFeedback = 0;
 
     mPidController->reset();
+}
+
+double Servo::map(double input, double inMin, double inMax, double outMin, double outMax)
+{
+    double result = outMin + (input - inMin) * (outMax - outMin) / (inMax - inMin);
+    if (result < outMin)
+    {
+        return outMin;
+    }
+    if (result > outMax)
+    {
+        return outMax;
+    }
+    return result;
 }
 
 // Unit: degree

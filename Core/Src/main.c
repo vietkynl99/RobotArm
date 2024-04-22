@@ -604,11 +604,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : M1_E2_Pin M2_E2_Pin M3_E2_Pin */
-  GPIO_InitStruct.Pin = M1_E2_Pin|M2_E2_Pin|M3_E2_Pin;
+  /*Configure GPIO pin : M1_E2_Pin */
+  GPIO_InitStruct.Pin = M1_E2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(M1_E2_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : M4_E1_Pin M5_E1_Pin M6_E1_Pin M1_E1_Pin
                            M2_E1_Pin M3_E1_Pin */
@@ -623,6 +623,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : M2_E2_Pin M3_E2_Pin */
+  GPIO_InitStruct.Pin = M2_E2_Pin|M3_E2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI3_IRQn, 0, 0);
