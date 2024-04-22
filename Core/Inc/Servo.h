@@ -7,8 +7,8 @@
 #define SERVO_SAMPLE_TIME_S         (1E-3)  // must matched with timer interrupt
 #define SERVO_ENCODER_RESOLUTION    (2)     // pulse per revolution
 #define SERVO_PWM_RESOLUTION        (999)   // must matched with timer pwm generator
-#define SERVO_FIXED_PWN_OUT         (200)   // the minimum value of pwm that the motor can run
-#define SERVO_FIXED_PWN_IN          (2)     // the minimum value of pwm that the motor can run
+#define SERVO_FIXED_PWN_OUT         (170)   // the minimum value of pwm that the motor can run
+#define SERVO_FIXED_PWN_IN          (0.3)     // the minimum value of pwm that the motor can run
 
 class Servo
 {
@@ -20,6 +20,7 @@ private:
 
     int64_t mEncoderPulse;
     double mEncoderResolution;
+    double mResolution;
 
     PidController *mPidController;
     TIM_HandleTypeDef *mOutputTimer;
@@ -31,14 +32,17 @@ public:
     ~Servo();
 
     void onEncoderEvent(bool direction);
+
+    void tune(PidParams params);
     void run();
     void reset();
-    double map(double input, double inMin, double inMax, double outMin, double outMax);
     void requestPosition(double postion);
+
     double getRequestedPosition();
     double getCurrentPosition();
     double getControlValue();
 
 private:
+    double map(double input, double inMin, double inMax, double outMin, double outMax);
 };
 #endif /* INC_SERVO_H_ */

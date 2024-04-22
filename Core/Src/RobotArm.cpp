@@ -87,19 +87,6 @@ bool onCommandResetServo(string params)
     return true;
 }
 
-bool onCommandTest(string params)
-{
-    if (mServo)
-    {
-        mServo->reset();
-
-        long value = stoi(params);
-        println("Set setpoint to %d", value);
-        mServo->requestPosition(value);
-    }
-    return true;
-}
-
 bool onCommandPlot(string params)
 {
     if (params == "on")
@@ -122,9 +109,26 @@ bool onCommandPlot(string params)
     }
 }
 
+bool onCommandTune(string params)
+{
+    float kp = 0, ki = 0, kd = 0;
+    int ret = sscanf(params.c_str(), "%f %f %f", &kp, &ki, &kd);
+    if (ret >= 1 && ret <= 3)
+    {
+        println("PID tune: kp=%.2f ki=%.2f kd=%.2f", kp, ki, kd);
+        PidParams params{kp, ki, kd};
+        mServo->tune(params);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 void setup(TIM_HandleTypeDef *htim)
 {
-    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, 30, 1);
+    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, 30, 0);
 
     println("");
     println("*****************");
@@ -136,7 +140,7 @@ void setup(TIM_HandleTypeDef *htim)
     CommandLine::install("servo-position", onCommandGetCurrentPosition);
     CommandLine::install("servo-setpoint", onCommandSetpoint);
     CommandLine::install("servo-reset", onCommandResetServo);
-    CommandLine::install("servo-test", onCommandTest);
+    CommandLine::install("servo-tune", onCommandTune, "servo-tune [kp] [ki] [kd]\t: set pid controller params");
 
     blinkLed(LED_GPIO_Port, LED_Pin, 3);
 }

@@ -3,14 +3,14 @@
 
 Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double kp, double ki, double kd)
 {
-    double resolution = 360 / gearRatio;
+    double mResolution = 360 / gearRatio;
 
     mOutputTimer = outputTimer;
     mOutputTimerCh1 = outputTimerCh1;
     mOutputTimerCh2 = outputTimerCh2;
-    mEncoderResolution = resolution / SERVO_ENCODER_RESOLUTION;
+    mEncoderResolution = mResolution / SERVO_ENCODER_RESOLUTION;
 
-    PidParams params{kp / resolution, ki / resolution, kd / resolution};
+    PidParams params{kp / mResolution, ki / mResolution, kd / mResolution};
     mPidController = new PidController(&mError, &mOutput, SERVO_SAMPLE_TIME_S, params, -SERVO_PWM_RESOLUTION, SERVO_PWM_RESOLUTION);
 
     reset();
@@ -39,6 +39,17 @@ void Servo::onEncoderEvent(bool direction)
     else
     {
         mEncoderPulse--;
+    }
+}
+
+void Servo::tune(PidParams params)
+{
+    if (mResolution > 0)
+    {
+        params.kp /= mResolution;
+        params.ki /= mResolution;
+        params.kd /= mResolution;
+        mPidController->tune(params);
     }
 }
 
