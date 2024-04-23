@@ -58,24 +58,24 @@ bool onCommandReboot(string params)
     return true;
 }
 
-bool onCommandGetCurrentPosition(string params)
+bool onCommandPosition(string params)
 {
-    if (mServo)
+    if (params.empty())
     {
         println("Current position: %.6f", (float)mServo->getCurrentPosition());
+        return true;
     }
-    return true;
-}
-
-bool onCommandSetpoint(string params)
-{
-    if (mServo)
+    else
     {
-        long value = stoi(params);
-        println("Set setpoint to %d", value);
-        mServo->requestPosition(value);
+        float setpoint = 0;
+        if (sscanf(params.c_str(), "%f", &setpoint) == 1)
+        {
+            println("Set setpoint to %.2f", setpoint);
+            mServo->requestPosition(setpoint);
+            return true;
+        }
     }
-    return true;
+    return false;
 }
 
 bool onCommandResetServo(string params)
@@ -137,9 +137,8 @@ void setup(TIM_HandleTypeDef *htim)
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
     CommandLine::install("plot", onCommandPlot, "plot [on/off]\t: turn on/off servo motor plotter");
-    CommandLine::install("servo-position", onCommandGetCurrentPosition);
-    CommandLine::install("servo-setpoint", onCommandSetpoint);
-    CommandLine::install("servo-reset", onCommandResetServo);
+    CommandLine::install("servo-position", onCommandPosition, "servo-position [value]\t: rotate the servo to position\r\nservo-position\t: get current position");
+    CommandLine::install("servo-reset", onCommandResetServo, "servo-reset\t: reset servo data");
     CommandLine::install("servo-tune", onCommandTune, "servo-tune [kp] [ki] [kd]\t: set pid controller params");
 
     blinkLed(LED_GPIO_Port, LED_Pin, 3);
