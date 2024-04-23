@@ -82,6 +82,11 @@ void CommandLine::onCharacterReceived(char ch)
                         {
                             inputStr += suffix;
                             print(suffix.c_str());
+                            if (list.size() == 1)
+                            {
+                                inputStr += " ";
+                                print(" ");
+                            }
                         }
                         else if (hasPrevTab)
                         {
