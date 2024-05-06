@@ -16,26 +16,34 @@ private:
     double mSetpoint;
     double mOutput;
     double mError;
-    double mFeedback;
 
     int64_t mEncoderPulse;
     double mEncoderResolution;
     double mResolution;
+    double mMinPosition;
+    double mMaxPosition;
+    double mZeroPosition;
 
     PidController *mPidController;
     TIM_HandleTypeDef *mOutputTimer;
     uint16_t mOutputTimerCh1;
     uint16_t mOutputTimerCh2;
+    bool mEnabled;
+    bool mZeroChecked;
+    bool mIsZeroDetecting;
 
 public:
-    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double kp = 0, double ki = 0, double kd = 0);
+    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp = 0, double ki = 0, double kd = 0);
     ~Servo();
 
     void onEncoderEvent(bool direction);
+    void onZeroDectected();
 
+    void setEnable(bool enabled);
     void tune(PidParams params);
     void run();
-    void reset();
+    void reset(double position = 0);
+    void zeroDetect();
     void requestPosition(double postion);
 
     double getRequestedPosition();
@@ -44,5 +52,6 @@ public:
 
 private:
     double map(double input, double inMin, double inMax, double outMin, double outMax);
+    void setOutput(int value);
 };
 #endif /* INC_SERVO_H_ */

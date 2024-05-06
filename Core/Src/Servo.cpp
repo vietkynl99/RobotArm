@@ -1,9 +1,18 @@
 #include "Servo.h"
 #include <stdio.h>
 
-Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double kp, double ki, double kd)
+#define ZERO_DETECTION_SPEED_PERCENT (0.25)
+
+Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp, double ki, double kd)
 {
-    double mResolution = 360 / gearRatio;
+    mEnabled = true;
+    mIsZeroDetecting = false;
+    mZeroChecked = false;
+    mMinPosition = minPosition;
+    mMaxPosition = maxPosition;
+    mZeroPosition = zeroPosition;
+
+    mResolution = 360 / gearRatio;
 
     mOutputTimer = outputTimer;
     mOutputTimerCh1 = outputTimerCh1;
@@ -42,57 +51,74 @@ void Servo::onEncoderEvent(bool direction)
     }
 }
 
+void Servo::onZeroDectected()
+{
+    if (mIsZeroDetecting)
+    {
+        println("Stop zero detection");
+        mIsZeroDetecting = false;
+        mZeroChecked = true;
+        reset(mZeroPosition);
+    }
+}
+
+void Servo::setEnable(bool enabled)
+{
+    mEnabled = enabled;
+}
+
 void Servo::tune(PidParams params)
 {
-    if (mResolution > 0)
-    {
-        params.kp /= mResolution;
-        params.ki /= mResolution;
-        params.kd /= mResolution;
-        mPidController->tune(params);
-    }
+    params.kp /= mResolution;
+    params.ki /= mResolution;
+    params.kd /= mResolution;
+    mPidController->tune(params);
 }
 
 void Servo::run()
 {
-    mError = mSetpoint - getCurrentPosition();
-    mPidController->run();
+    if (mEnabled && !mIsZeroDetecting)
+    {
+        mError = mSetpoint - getCurrentPosition();
+        mPidController->run();
 
-    double fixedOutput = mOutput;
-    if (fixedOutput > -SERVO_FIXED_PWN_IN && fixedOutput < SERVO_FIXED_PWN_IN)
-    {
-        fixedOutput = map(fixedOutput, -SERVO_FIXED_PWN_IN, SERVO_FIXED_PWN_IN, -SERVO_FIXED_PWN_OUT, SERVO_FIXED_PWN_OUT);
-    }
-    else if (fixedOutput > 0)
-    {
-        fixedOutput = map(fixedOutput, SERVO_FIXED_PWN_IN, SERVO_PWM_RESOLUTION, SERVO_FIXED_PWN_OUT, SERVO_PWM_RESOLUTION);
-    }
-    else
-    {
-        fixedOutput = map(fixedOutput, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_IN, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_OUT);
-    }
+        double fixedOutput = mOutput;
+        if (fixedOutput > -SERVO_FIXED_PWN_IN && fixedOutput < SERVO_FIXED_PWN_IN)
+        {
+            fixedOutput = map(fixedOutput, -SERVO_FIXED_PWN_IN, SERVO_FIXED_PWN_IN, -SERVO_FIXED_PWN_OUT, SERVO_FIXED_PWN_OUT);
+        }
+        else if (fixedOutput > 0)
+        {
+            fixedOutput = map(fixedOutput, SERVO_FIXED_PWN_IN, SERVO_PWM_RESOLUTION, SERVO_FIXED_PWN_OUT, SERVO_PWM_RESOLUTION);
+        }
+        else
+        {
+            fixedOutput = map(fixedOutput, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_IN, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_OUT);
+        }
 
-    if (fixedOutput > 0)
-    {
-        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, fixedOutput);
-        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, 0);
-    }
-    else
-    {
-        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, 0);
-        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, -fixedOutput);
+        setOutput(fixedOutput);
     }
 }
 
-void Servo::reset()
+void Servo::reset(double position)
 {
-    mEncoderPulse = 0;
-    mSetpoint = 0;
+    mEncoderPulse = position / mEncoderResolution;
+    mSetpoint = position;
     mOutput = 0;
     mError = 0;
-    mFeedback = 0;
 
     mPidController->reset();
+}
+
+void Servo::zeroDetect()
+{
+    if (mEnabled && !mIsZeroDetecting)
+    {
+        println("Zero dectect is running...");
+        mIsZeroDetecting = true;
+        mZeroChecked = false;
+        setOutput(SERVO_PWM_RESOLUTION * ZERO_DETECTION_SPEED_PERCENT);
+    }
 }
 
 double Servo::map(double input, double inMin, double inMax, double outMin, double outMax)
@@ -109,9 +135,36 @@ double Servo::map(double input, double inMin, double inMax, double outMin, doubl
     return result;
 }
 
+void Servo::setOutput(int value)
+{
+    if (mEnabled)
+    {
+        if (value > 0)
+        {
+            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, value);
+            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, 0);
+        }
+        else
+        {
+            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, 0);
+            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, -value);
+        }
+    }
+}
+
 // Unit: degree
 void Servo::requestPosition(double postion)
 {
+    if (!mZeroChecked)
+    {
+        println("Need to check zero position");
+        return;
+    }
+    if (postion > mMaxPosition || postion < mMinPosition)
+    {
+        println("Outside of range");
+        return;
+    }
     mSetpoint = postion;
 }
 

@@ -12,6 +12,7 @@
 
 EXTERNC void onUartDataReceived(char ch);
 EXTERNC void onGpioExt(uint16_t pin);
+EXTERNC void onZeroDetected(int index);
 EXTERNC void onControllerInterrupt();
 
 EXTERNC void setup(TIM_HandleTypeDef *htim);

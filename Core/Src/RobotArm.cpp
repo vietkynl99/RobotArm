@@ -39,6 +39,14 @@ void onGpioExt(uint16_t pin)
     }
 }
 
+void onZeroDetected(int index)
+{
+    if (index == 0)
+    {
+        mServo->onZeroDectected();
+    }
+}
+
 void onControllerInterrupt()
 {
     if (mServo)
@@ -70,7 +78,6 @@ bool onCommandPosition(string params)
         float setpoint = 0;
         if (sscanf(params.c_str(), "%f", &setpoint) == 1)
         {
-            println("Set setpoint to %.2f", setpoint);
             mServo->requestPosition(setpoint);
             return true;
         }
@@ -126,20 +133,50 @@ bool onCommandTune(string params)
     }
 }
 
+bool onCommandEnable(string params)
+{
+    if (params == "on")
+    {
+        println("Servo is enabled");
+        mServo->setEnable(true);
+        return true;
+    }
+    else if (params == "off")
+    {
+        println("Servo is disabled");
+        mServo->setEnable(false);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool onCommandZeroDetect(string params)
+{
+    if (!params.empty())
+    {
+        return false;
+    }
+    mServo->zeroDetect();
+    return true;
+}
+
 void setup(TIM_HandleTypeDef *htim)
 {
-    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, 30, 0);
+    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775 * 4, true, -160, 170, 180, 30, 0);
 
     println("");
-    println("*****************");
     println("*** Robot Arm ***");
-    println("*****************");
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
     CommandLine::install("plot", onCommandPlot, "plot [on/off]\t: turn on/off servo motor plotter");
-    CommandLine::install("servo-position", onCommandPosition, "servo-position [value]\t: rotate the servo to position\r\nservo-position\t: get current position");
-    CommandLine::install("servo-reset", onCommandResetServo, "servo-reset\t: reset servo data");
-    CommandLine::install("servo-tune", onCommandTune, "servo-tune [kp] [ki] [kd]\t: set pid controller params");
+    CommandLine::install("position", onCommandPosition, "position [value]\t: rotate the servo to position\r\nservo-position\t: get current position");
+    CommandLine::install("reset", onCommandResetServo, "reset\t: reset servo data");
+    CommandLine::install("tune", onCommandTune, "tune [kp] [ki] [kd]\t: set pid controller params");
+    CommandLine::install("enable", onCommandEnable, "enable [on/off]\t: turn on/off servo");
+    CommandLine::install("zero-detect", onCommandZeroDetect, "zero-detect\t: Zero dectection");
 
     blinkLed(LED_GPIO_Port, LED_Pin, 3);
 }
