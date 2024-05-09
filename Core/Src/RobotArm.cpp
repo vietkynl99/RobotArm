@@ -165,7 +165,7 @@ bool onCommandZeroDetect(string params)
 
 void setup(TIM_HandleTypeDef *htim)
 {
-    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775 * 4, true, -160, 170, 180, 30, 0);
+    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
 
     println("");
     println("*** Robot Arm ***");

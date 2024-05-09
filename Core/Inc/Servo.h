@@ -33,7 +33,7 @@ private:
     bool mIsZeroDetecting;
 
 public:
-    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp = 0, double ki = 0, double kd = 0);
+    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp, double ki, double kd);
     ~Servo();
 
     void onEncoderEvent(bool direction);
