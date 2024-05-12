@@ -538,6 +538,7 @@ static void MX_TIM4_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM4_Init 1 */
 
@@ -557,15 +558,28 @@ static void MX_TIM4_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM4_Init 2 */
 
   /* USER CODE END TIM4_Init 2 */
+  HAL_TIM_MspPostInit(&htim4);
 
 }
 
@@ -618,14 +632,14 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(EP_CTRL_GPIO_Port, EP_CTRL_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : LED_Pin */
-  GPIO_InitStruct.Pin = LED_Pin;
+  /*Configure GPIO pin : EP_CTRL_Pin */
+  GPIO_InitStruct.Pin = EP_CTRL_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(EP_CTRL_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : M5_E1_Pin M6_E1_Pin */
   GPIO_InitStruct.Pin = M5_E1_Pin|M6_E1_Pin;
@@ -639,10 +653,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : M1_E2_Pin M2_E2_Pin M3_E2_Pin M6_E2_Pin
-                           BUTTON_Pin */
-  GPIO_InitStruct.Pin = M1_E2_Pin|M2_E2_Pin|M3_E2_Pin|M6_E2_Pin
-                          |BUTTON_Pin;
+  /*Configure GPIO pins : M1_E2_Pin M2_E2_Pin M3_E2_Pin M6_E2_Pin */
+  GPIO_InitStruct.Pin = M1_E2_Pin|M2_E2_Pin|M3_E2_Pin|M6_E2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
