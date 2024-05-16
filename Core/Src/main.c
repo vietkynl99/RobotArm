@@ -60,6 +60,12 @@ uint8_t uartRxData;
 volatile uint8_t uartRxBuffer[UART_BUFFER_SIZE];
 volatile int uartBuffWIndex = 0;
 int uartBuffRIndex = 0;
+
+#define SPI_BUFFER_SIZE (64)
+uint8_t spiRxData;
+volatile uint8_t spiRxBuffer[SPI_BUFFER_SIZE];
+volatile int spiBuffWIndex = 0;
+int spiBuffRIndex = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -74,6 +80,7 @@ static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 void uartRxHandler();
+void spiRxHandler();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -127,6 +134,9 @@ int main(void)
   setLogUartHandler(&huart1);
   HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
 
+  // SPI
+  HAL_SPI_Receive_IT(&hspi1, &spiRxData, 1);
+
   //PWM
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
@@ -142,6 +152,7 @@ int main(void)
   while (1)
   {
     uartRxHandler();
+    spiRxHandler();
     loop();
     /* USER CODE END WHILE */
 
@@ -274,7 +285,7 @@ static void MX_SPI1_Init(void)
   /* USER CODE END SPI1_Init 1 */
   /* SPI1 parameter configuration*/
   hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Mode = SPI_MODE_SLAVE;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
@@ -687,6 +698,31 @@ void uartRxHandler()
       uartBuffRIndex = 0;
     }
     onUartDataReceived(uartRxBuffer[uartBuffRIndex]);
+  }
+}
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    spiBuffWIndex++;
+    if (spiBuffWIndex >= SPI_BUFFER_SIZE)
+    {
+      spiBuffWIndex = 0;
+    }
+    spiRxBuffer[spiBuffWIndex] = spiRxData;
+    HAL_SPI_Receive_IT(&hspi1, &spiRxData, 1);
+}
+
+void spiRxHandler()
+{
+  if (spiBuffRIndex != spiBuffWIndex)
+  {
+    spiBuffRIndex++;
+    if (spiBuffRIndex >= SPI_BUFFER_SIZE)
+    {
+      spiBuffRIndex = 0;
+    }
+    // onSpiDataReceived(spiRxBuffer[spiBuffRIndex]);
+    println("spi: %c", spiRxBuffer[spiBuffRIndex]);
   }
 }
 
