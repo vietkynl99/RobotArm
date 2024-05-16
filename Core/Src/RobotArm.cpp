@@ -12,17 +12,6 @@ using namespace std;
 Servo *mServo;
 bool mLogEnabled = false;
 
-void blinkLed(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, int count)
-{
-    for (int i = 0; i < count; i++)
-    {
-        HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_RESET);
-        HAL_Delay(60);
-        HAL_GPIO_WritePin(GPIOx, GPIO_Pin, GPIO_PIN_SET);
-        HAL_Delay(60);
-    }
-}
-
 void onUartDataReceived(char ch)
 {
     CommandLine::onCharacterReceived(ch);
@@ -177,8 +166,6 @@ void setup(TIM_HandleTypeDef *htim)
     CommandLine::install("tune", onCommandTune, "tune [kp] [ki] [kd]\t: set pid controller params");
     CommandLine::install("enable", onCommandEnable, "enable [on/off]\t: turn on/off servo");
     CommandLine::install("zero-detect", onCommandZeroDetect, "zero-detect\t: Zero dectection");
-
-    blinkLed(LED_GPIO_Port, LED_Pin, 3);
 }
 
 void loop()
