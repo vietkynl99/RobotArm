@@ -1,6 +1,7 @@
 #include "RobotArm.h"
 #include "CommandLine.h"
 #include "Servo.h"
+#include "DeviceController.h"
 
 #include <string>
 #include <cstring>
@@ -9,12 +10,21 @@ using namespace std;
 
 #define SERVO_LOG_INTERVAL_MS (50)
 
+DeviceController *mDeviceController;
 Servo *mServo;
 bool mLogEnabled = false;
 
 void onUartDataReceived(char ch)
 {
     CommandLine::onCharacterReceived(ch);
+}
+
+void onSpiDataReceived()
+{
+    if (mDeviceController)
+    {
+        mDeviceController->onDataReceived();
+    }
 }
 
 void onGpioExt(uint16_t pin)
@@ -152,8 +162,9 @@ bool onCommandZeroDetect(string params)
     return true;
 }
 
-void setup(TIM_HandleTypeDef *htim)
+void setup(TIM_HandleTypeDef *htim, SPI_HandleTypeDef *hspi)
 {
+    mDeviceController = new DeviceController(hspi);
     mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
 
     println("");

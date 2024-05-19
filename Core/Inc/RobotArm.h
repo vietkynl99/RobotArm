@@ -11,11 +11,12 @@
 #endif
 
 EXTERNC void onUartDataReceived(char ch);
+EXTERNC void onSpiDataReceived();
 EXTERNC void onGpioExt(uint16_t pin);
 EXTERNC void onZeroDetected(int index);
 EXTERNC void onControllerInterrupt();
 
-EXTERNC void setup(TIM_HandleTypeDef *htim);
+EXTERNC void setup(TIM_HandleTypeDef *htim, SPI_HandleTypeDef *hspi);
 EXTERNC void loop();
 
 #endif /* INC_ROBOTARM_H_ */

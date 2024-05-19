@@ -45,6 +45,8 @@
 ADC_HandleTypeDef hadc1;
 
 SPI_HandleTypeDef hspi1;
+DMA_HandleTypeDef hdma_spi1_rx;
+DMA_HandleTypeDef hdma_spi1_tx;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
@@ -60,17 +62,12 @@ uint8_t uartRxData;
 volatile uint8_t uartRxBuffer[UART_BUFFER_SIZE];
 volatile int uartBuffWIndex = 0;
 int uartBuffRIndex = 0;
-
-#define SPI_BUFFER_SIZE (64)
-uint8_t spiRxData;
-volatile uint8_t spiRxBuffer[SPI_BUFFER_SIZE];
-volatile int spiBuffWIndex = 0;
-int spiBuffRIndex = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM3_Init(void);
@@ -80,7 +77,6 @@ static void MX_ADC1_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 void uartRxHandler();
-void spiRxHandler();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -116,6 +112,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
@@ -129,13 +126,14 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   // UART
   setCmdUartHandler(&huart1);
   setLogUartHandler(&huart1);
   HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
 
-  // SPI
-  HAL_SPI_Receive_IT(&hspi1, &spiRxData, 1);
+  // cpp code
+  setup(&htim1, &hspi1);
 
   //PWM
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
@@ -146,13 +144,9 @@ int main(void)
   // Timer interrupt
   HAL_TIM_Base_Start_IT(&htim4);
 
-  // cpp code
-  setup(&htim1);
-
   while (1)
   {
     uartRxHandler();
-    spiRxHandler();
     loop();
     /* USER CODE END WHILE */
 
@@ -628,6 +622,25 @@ static void MX_USART1_UART_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  /* DMA1_Channel3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -713,29 +726,9 @@ void uartRxHandler()
   }
 }
 
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    spiBuffWIndex++;
-    if (spiBuffWIndex >= SPI_BUFFER_SIZE)
-    {
-      spiBuffWIndex = 0;
-    }
-    spiRxBuffer[spiBuffWIndex] = spiRxData;
-    HAL_SPI_Receive_IT(&hspi1, &spiRxData, 1);
-}
-
-void spiRxHandler()
-{
-  if (spiBuffRIndex != spiBuffWIndex)
-  {
-    spiBuffRIndex++;
-    if (spiBuffRIndex >= SPI_BUFFER_SIZE)
-    {
-      spiBuffRIndex = 0;
-    }
-    // onSpiDataReceived(spiRxBuffer[spiBuffRIndex]);
-    println("spi: %c", spiRxBuffer[spiBuffRIndex]);
-  }
+  onSpiDataReceived();
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
