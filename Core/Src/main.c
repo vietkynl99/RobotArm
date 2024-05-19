@@ -731,6 +731,15 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
   onSpiDataReceived();
 }
 
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
+{
+  println("HAL_SPI_ErrorCallback: error %d", HAL_SPI_GetError(&hspi1));
+}
+void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi)
+{
+  println("HAL_SPI_AbortCpltCallback");
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   onGpioExt(GPIO_Pin);
@@ -751,6 +760,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+  println("Error occured");
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)

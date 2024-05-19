@@ -39,16 +39,20 @@ private:
     DataFrame mRxDataFrame;
     SPI_HandleTypeDef *mHspi;
     DeviceStatus mStatus;
+    uint32_t mLastTimeTick;
 
 public:
     DeviceController(SPI_HandleTypeDef *hspi);
 
     void onDataReceived();
+    void run();
     
 private:
+    void resetConnection();
     string getString(const DataFrame &frame);
     uint8_t calculateChecksum(const uint8_t *data, size_t length);
     bool verifyChecksum(const uint8_t *data, size_t length, uint8_t checksum);
+    void setStatus(DeviceStatus status);
     void createDataFrame(DataFrame &dataFrame, uint8_t command, const uint8_t *data, size_t length);
     DeviceStatus verifyDataFrame(const DataFrame &frame);
 };

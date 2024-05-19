@@ -2,6 +2,8 @@
 #include "Log.h"
 #include <cstring>
 
+#define CONNECTION_TIMEOUT 2350
+
 #define CMD_REQUEST_PING 1
 
 #define CMD_RESPONSE_PING 101
@@ -10,9 +12,17 @@
 DeviceController::DeviceController(SPI_HandleTypeDef *hspi)
 {
     mHspi = hspi;
+    mLastTimeTick = 0;
+    resetConnection();
+}
+
+void DeviceController::resetConnection()
+{
+    println("resetConnection");
+
     memset(&mTxDataFrame, 0, sizeof(DataFrame));
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
-    mStatus = STATUS_DISCONNECTED;
+    setStatus(STATUS_DISCONNECTED);
 
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
 }
@@ -50,6 +60,23 @@ bool DeviceController::verifyChecksum(const uint8_t *data, size_t length, uint8_
     }
     sum ^= checksum;
     return sum == 0;
+}
+
+void DeviceController::setStatus(DeviceStatus status)
+{
+    if (mStatus != status)
+    {
+        mStatus = status;
+        if (mStatus == STATUS_CONNECTED)
+        {
+            createDataFrame(mTxDataFrame, CMD_RESPONSE_PING, nullptr, 0);
+        }
+        else
+        {
+            createDataFrame(mTxDataFrame, CMD_RESPONSE_DATA_ERROR, nullptr, 0);
+        }
+        println("Status changed to %d", mStatus);
+    }
 }
 
 void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, const uint8_t *data, size_t length)
@@ -90,20 +117,19 @@ DeviceStatus DeviceController::verifyDataFrame(const DataFrame &frame)
 
 void DeviceController::onDataReceived()
 {
+    mLastTimeTick = HAL_GetTick() + CONNECTION_TIMEOUT;
     DeviceStatus status = verifyDataFrame(mRxDataFrame);
     println("received: %s -> status: %d", getString(mRxDataFrame).c_str(), status);
-    if (mStatus != status)
-    {
-        mStatus = status;
-        if (mStatus == STATUS_CONNECTED)
-        {
-            createDataFrame(mTxDataFrame, CMD_RESPONSE_PING, nullptr, 0);
-        }
-        else
-        {
-            createDataFrame(mTxDataFrame, CMD_RESPONSE_DATA_ERROR, nullptr, 0);
-        }
-    }
+    setStatus(status);
 
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
+}
+
+void DeviceController::run()
+{
+    // if (HAL_GetTick() > mLastTimeTick)
+    // {
+    //     mLastTimeTick = HAL_GetTick() + CONNECTION_TIMEOUT;
+    //     resetConnection();
+    // }
 }

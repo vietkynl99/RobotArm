@@ -183,6 +183,8 @@ void loop()
 {
     static uint32_t timeTick = 0;
 
+    mDeviceController->run();
+
     if (mLogEnabled && HAL_GetTick() > timeTick)
     {
         timeTick = HAL_GetTick() + SERVO_LOG_INTERVAL_MS;
