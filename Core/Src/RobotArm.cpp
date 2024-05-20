@@ -40,6 +40,7 @@ void onGpioExt(uint16_t pin)
 
 void onZeroDetected(int index)
 {
+    // println("onZeroDetected: %d", index);
     if (index == 0)
     {
         mServo->onZeroDectected();

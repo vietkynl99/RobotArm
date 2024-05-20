@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdlib.h>
 #include "Log.h"
 #include "RobotArm.h"
 /* USER CODE END Includes */
@@ -56,6 +57,8 @@ TIM_HandleTypeDef htim4;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+#define ADC_TOLERANCE (20) // 0.5% of max value (4096)
+
 #define UART_BUFFER_SIZE (64)
 
 uint8_t uartRxData;
@@ -162,7 +165,7 @@ int main(void)
       int value = HAL_ADC_GetValue(&hadc1);
       HAL_ADC_Stop(&hadc1);
 
-      if (value < 100)
+      if (abs(value - 440) < ADC_TOLERANCE)
       {
         onZeroDetected(0);
       }

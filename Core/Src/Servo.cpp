@@ -162,7 +162,7 @@ void Servo::requestPosition(double postion)
     }
     if (postion > mMaxPosition || postion < mMinPosition)
     {
-        println("Outside of range");
+        println("Out of range [%.2f; %.2f]", mMinPosition, mMaxPosition);
         return;
     }
     mSetpoint = postion;
