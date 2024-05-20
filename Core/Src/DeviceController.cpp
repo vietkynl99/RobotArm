@@ -2,7 +2,7 @@
 #include "Log.h"
 #include <cstring>
 
-#define CONNECTION_TIMEOUT 2350
+#define CONNECTION_TIMEOUT 1000
 
 #define CMD_REQUEST_PING 1
 
@@ -12,13 +12,7 @@
 DeviceController::DeviceController(SPI_HandleTypeDef *hspi)
 {
     mHspi = hspi;
-    mLastTimeTick = 0;
-    resetConnection();
-}
-
-void DeviceController::resetConnection()
-{
-    println("resetConnection");
+    mLastTime = 0;
 
     memset(&mTxDataFrame, 0, sizeof(DataFrame));
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
@@ -106,18 +100,18 @@ DeviceStatus DeviceController::verifyDataFrame(const DataFrame &frame)
     }
     else if (frame.start != SPI_DATA_START_BYTE)
     {
-        return STATUS_START_BYTE_ERROR;
+        return STATUS_DATA_ERROR;
     }
     if (!verifyChecksum(frame.rawData, SPI_FRAME_SIZE - 1, frame.checksum))
     {
-        return STATUS_CHECKSUM_ERROR;
+        return STATUS_DATA_ERROR;
     }
     return STATUS_CONNECTED;
 }
 
 void DeviceController::onDataReceived()
 {
-    mLastTimeTick = HAL_GetTick() + CONNECTION_TIMEOUT;
+    mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
     DeviceStatus status = verifyDataFrame(mRxDataFrame);
     println("received: %s -> status: %d", getString(mRxDataFrame).c_str(), status);
     setStatus(status);
@@ -125,11 +119,36 @@ void DeviceController::onDataReceived()
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
 }
 
+void DeviceController::onDataError()
+{
+    // println("onDataError");
+    setStatus(STATUS_DISCONNECTED);
+
+    HAL_SPI_DeInit(mHspi);
+    asm("nop");
+    asm("nop");
+    __SPI1_FORCE_RESET();
+    asm("nop");
+    asm("nop");
+    __SPI1_RELEASE_RESET();
+    asm("nop");
+    asm("nop");
+    HAL_SPI_Init(mHspi);
+    asm("nop");
+    asm("nop");
+    HAL_SPI_DMAStop(mHspi);
+    asm("nop");
+    asm("nop");
+
+    HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
+}
+
 void DeviceController::run()
 {
-    // if (HAL_GetTick() > mLastTimeTick)
-    // {
-    //     mLastTimeTick = HAL_GetTick() + CONNECTION_TIMEOUT;
-    //     resetConnection();
-    // }
+    if (mStatus != STATUS_DISCONNECTED && HAL_GetTick() > mLastTime)
+    {
+        // println("Timeout...");
+        mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
+        setStatus(STATUS_DISCONNECTED);
+    }
 }

@@ -26,8 +26,6 @@ enum DeviceStatus
 {
     STATUS_DISCONNECTED,
     STATUS_DATA_ERROR,
-    STATUS_START_BYTE_ERROR,
-    STATUS_CHECKSUM_ERROR,
     STATUS_UNKNOWN_CMD_ERROR,
     STATUS_CONNECTED,
 };
@@ -39,16 +37,16 @@ private:
     DataFrame mRxDataFrame;
     SPI_HandleTypeDef *mHspi;
     DeviceStatus mStatus;
-    uint32_t mLastTimeTick;
+    uint32_t mLastTime;
 
 public:
     DeviceController(SPI_HandleTypeDef *hspi);
 
     void onDataReceived();
+    void onDataError();
     void run();
     
 private:
-    void resetConnection();
     string getString(const DataFrame &frame);
     uint8_t calculateChecksum(const uint8_t *data, size_t length);
     bool verifyChecksum(const uint8_t *data, size_t length, uint8_t checksum);

@@ -736,8 +736,10 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 {
-  println("HAL_SPI_ErrorCallback: error %d", HAL_SPI_GetError(&hspi1));
+    // println("HAL_SPI_ErrorCallback: error 0x%X", HAL_SPI_GetError(hspi));
+    onSpiDataError();
 }
+
 void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi)
 {
   println("HAL_SPI_AbortCpltCallback");

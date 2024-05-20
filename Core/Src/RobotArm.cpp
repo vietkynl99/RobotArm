@@ -27,6 +27,14 @@ void onSpiDataReceived()
     }
 }
 
+void onSpiDataError()
+{
+    if (mDeviceController)
+    {
+        mDeviceController->onDataError();
+    }
+}
+
 void onGpioExt(uint16_t pin)
 {
     if (pin == M1_E1_Pin)
