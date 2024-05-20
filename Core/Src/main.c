@@ -680,13 +680,13 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : M1_E2_Pin M2_E2_Pin M3_E2_Pin M6_E2_Pin */
   GPIO_InitStruct.Pin = M1_E2_Pin|M2_E2_Pin|M3_E2_Pin|M6_E2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : M4_E2_Pin M5_E2_Pin */
   GPIO_InitStruct.Pin = M4_E2_Pin|M5_E2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
