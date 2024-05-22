@@ -6,8 +6,8 @@
 
 using namespace std;
 
-#define SPI_FRAME_SIZE 			(11)
-#define SPI_DATA_SIZE 			(SPI_FRAME_SIZE - 4)
+#define SPI_DATA_SIZE 			(24)
+#define SPI_FRAME_SIZE 			(SPI_DATA_SIZE + 4)
 #define SPI_DATA_START_BYTE 	(0x99D7)
 
 typedef union

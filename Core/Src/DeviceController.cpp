@@ -113,7 +113,7 @@ void DeviceController::onDataReceived()
 {
     mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
     DeviceState state = verifyDataFrame(mRxDataFrame);
-    println("received: %s -> state: %d", getString(mRxDataFrame).c_str(), state);
+    // println("received: %s -> state: %d", getString(mRxDataFrame).c_str(), state);
     setState(state);
 
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
