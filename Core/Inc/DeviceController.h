@@ -6,16 +6,16 @@
 
 using namespace std;
 
-#define SPI_FRAME_SIZE 			(10)
-#define SPI_DATA_SIZE 			(SPI_FRAME_SIZE - 3)
-#define SPI_DATA_START_BYTE 	(153)
+#define SPI_FRAME_SIZE 			(11)
+#define SPI_DATA_SIZE 			(SPI_FRAME_SIZE - 4)
+#define SPI_DATA_START_BYTE 	(0x99D7)
 
 typedef union
 {
 	uint8_t rawData[SPI_FRAME_SIZE];
 	struct
 	{
-		uint8_t start;
+		uint16_t start;
 		uint8_t command;
 		uint8_t data[SPI_DATA_SIZE];
 		uint8_t checksum;
