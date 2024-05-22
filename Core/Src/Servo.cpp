@@ -23,6 +23,10 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
     mPidController = new PidController(&mError, &mOutput, SERVO_SAMPLE_TIME_S, params, -SERVO_PWM_RESOLUTION, SERVO_PWM_RESOLUTION);
 
     reset();
+
+    HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh1);
+	HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh2);
+    setOutput(0);
 }
 
 Servo::~Servo()

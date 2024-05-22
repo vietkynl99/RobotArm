@@ -17,7 +17,7 @@ EXTERNC void onGpioExt(uint16_t pin);
 EXTERNC void onZeroDetected(int index);
 EXTERNC void onControllerInterrupt();
 
-EXTERNC void setup(TIM_HandleTypeDef *htim, SPI_HandleTypeDef *hspi);
+EXTERNC void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi);
 EXTERNC void loop();
 
 #endif /* INC_ROBOTARM_H_ */

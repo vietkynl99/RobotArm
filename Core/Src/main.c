@@ -136,13 +136,7 @@ int main(void)
   HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
 
   // cpp code
-  setup(&htim1, &hspi1);
-
-  //PWM
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+  setup(&htim1, &htim2, &htim3, &hspi1);
 
   // Timer interrupt
   HAL_TIM_Base_Start_IT(&htim4);

@@ -9,9 +9,10 @@
 using namespace std;
 
 #define SERVO_LOG_INTERVAL_MS (50)
+#define SERVO_NUMS (6)
 
 DeviceController *mDeviceController;
-Servo *mServo;
+Servo *mServo[SERVO_NUMS];
 bool mLogEnabled = false;
 
 void onUartDataReceived(char ch)
@@ -37,29 +38,54 @@ void onSpiDataError()
 
 void onGpioExt(uint16_t pin)
 {
+    if (!mServo[5])
+    {
+        return;
+    }
     if (pin == M1_E1_Pin)
     {
-        if (mServo)
-        {
-            mServo->onEncoderEvent(!HAL_GPIO_ReadPin(M1_E2_GPIO_Port, M1_E2_Pin));
-        }
+        mServo[0]->onEncoderEvent(!HAL_GPIO_ReadPin(M1_E2_GPIO_Port, M1_E2_Pin));
+    }
+    else if (pin == M2_E1_Pin)
+    {
+        mServo[1]->onEncoderEvent(!HAL_GPIO_ReadPin(M2_E2_GPIO_Port, M2_E2_Pin));
+    }
+    else if (pin == M3_E1_Pin)
+    {
+        mServo[2]->onEncoderEvent(!HAL_GPIO_ReadPin(M3_E2_GPIO_Port, M3_E2_Pin));
+    }
+    else if (pin == M4_E1_Pin)
+    {
+        mServo[3]->onEncoderEvent(!HAL_GPIO_ReadPin(M4_E2_GPIO_Port, M4_E2_Pin));
+    }
+    else if (pin == M5_E1_Pin)
+    {
+        mServo[4]->onEncoderEvent(!HAL_GPIO_ReadPin(M5_E2_GPIO_Port, M5_E2_Pin));
+    }
+    else if (pin == M6_E1_Pin)
+    {
+        mServo[5]->onEncoderEvent(!HAL_GPIO_ReadPin(M6_E2_GPIO_Port, M6_E2_Pin));
     }
 }
 
 void onZeroDetected(int index)
 {
     // println("onZeroDetected: %d", index);
-    if (index == 0)
+    if (index >= 0 && index < SERVO_NUMS)
     {
-        mServo->onZeroDectected();
+        mServo[index]->onZeroDectected();
     }
 }
 
 void onControllerInterrupt()
 {
-    if (mServo)
+    if (!mServo[5])
     {
-        mServo->run();
+        return;
+    }
+    for (int i = 0; i < SERVO_NUMS; i++)
+    {
+        mServo[i]->run();
     }
 }
 
@@ -78,7 +104,7 @@ bool onCommandPosition(string params)
 {
     if (params.empty())
     {
-        println("Current position: %.6f", (float)mServo->getCurrentPosition());
+        println("Current position: %.6f", (float)mServo[0]->getCurrentPosition());
         return true;
     }
     else
@@ -86,7 +112,7 @@ bool onCommandPosition(string params)
         float setpoint = 0;
         if (sscanf(params.c_str(), "%f", &setpoint) == 1)
         {
-            mServo->requestPosition(setpoint);
+            mServo[0]->requestPosition(setpoint);
             return true;
         }
     }
@@ -95,9 +121,9 @@ bool onCommandPosition(string params)
 
 bool onCommandResetServo(string params)
 {
-    if (mServo)
+    for (int i = 0; i < SERVO_NUMS; i++)
     {
-        mServo->reset();
+        mServo[i]->reset();
     }
     return true;
 }
@@ -132,7 +158,7 @@ bool onCommandTune(string params)
     {
         println("PID tune: kp=%.2f ki=%.2f kd=%.2f", kp, ki, kd);
         PidParams params{kp, ki, kd};
-        mServo->tune(params);
+        mServo[0]->tune(params);
         return true;
     }
     else
@@ -146,13 +172,19 @@ bool onCommandEnable(string params)
     if (params == "on")
     {
         println("Servo is enabled");
-        mServo->setEnable(true);
+        for (int i = 0; i < SERVO_NUMS; i++)
+        {
+            mServo[i]->setEnable(true);
+        }
         return true;
     }
     else if (params == "off")
     {
         println("Servo is disabled");
-        mServo->setEnable(false);
+        for (int i = 0; i < SERVO_NUMS; i++)
+        {
+            mServo[i]->setEnable(false);
+        }
         return true;
     }
     else
@@ -167,14 +199,19 @@ bool onCommandZeroDetect(string params)
     {
         return false;
     }
-    mServo->zeroDetect();
+    mServo[0]->zeroDetect();
     return true;
 }
 
-void setup(TIM_HandleTypeDef *htim, SPI_HandleTypeDef *hspi)
+void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
     mDeviceController = new DeviceController(hspi);
-    mServo = new Servo(htim, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
 
     println("");
     println("*** Robot Arm ***");
@@ -197,6 +234,6 @@ void loop()
     if (mLogEnabled && HAL_GetTick() > timeTick)
     {
         timeTick = HAL_GetTick() + SERVO_LOG_INTERVAL_MS;
-        printlnLog("%.2f %.2f %.2f", mServo->getRequestedPosition(), mServo->getCurrentPosition(), 100 * mServo->getControlValue() / SERVO_PWM_RESOLUTION);
+        printlnLog("%.2f %.2f %.2f", mServo[0]->getRequestedPosition(), mServo[0]->getCurrentPosition(), 100 * mServo[0]->getControlValue() / SERVO_PWM_RESOLUTION);
     }
 }
