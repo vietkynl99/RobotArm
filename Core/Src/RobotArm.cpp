@@ -1,6 +1,5 @@
 #include "RobotArm.h"
 #include "CommandLine.h"
-#include "Servo.h"
 #include "DeviceController.h"
 
 #include <string>
@@ -8,11 +7,7 @@
 
 using namespace std;
 
-#define SERVO_LOG_INTERVAL_MS (50)
-#define SERVO_NUMS (6)
-
-DeviceController *mDeviceController;
-Servo *mServo[SERVO_NUMS];
+DeviceController *mController;
 
 void onUartDataReceived(char ch)
 {
@@ -21,70 +16,41 @@ void onUartDataReceived(char ch)
 
 void onSpiDataReceived()
 {
-    if (mDeviceController)
+    if (mController)
     {
-        mDeviceController->onDataReceived();
+        mController->onDataReceived();
     }
 }
 
 void onSpiDataError()
 {
-    if (mDeviceController)
+    if (mController)
     {
-        mDeviceController->onDataError();
+        mController->onDataError();
     }
 }
 
 void onGpioExt(uint16_t pin)
 {
-    if (!mServo[5])
+    if (mController)
     {
-        return;
-    }
-    if (pin == M1_E1_Pin)
-    {
-        mServo[0]->onEncoderEvent(!HAL_GPIO_ReadPin(M1_E2_GPIO_Port, M1_E2_Pin));
-    }
-    else if (pin == M2_E1_Pin)
-    {
-        mServo[1]->onEncoderEvent(!HAL_GPIO_ReadPin(M2_E2_GPIO_Port, M2_E2_Pin));
-    }
-    else if (pin == M3_E1_Pin)
-    {
-        mServo[2]->onEncoderEvent(!HAL_GPIO_ReadPin(M3_E2_GPIO_Port, M3_E2_Pin));
-    }
-    else if (pin == M4_E1_Pin)
-    {
-        mServo[3]->onEncoderEvent(!HAL_GPIO_ReadPin(M4_E2_GPIO_Port, M4_E2_Pin));
-    }
-    else if (pin == M5_E1_Pin)
-    {
-        mServo[4]->onEncoderEvent(!HAL_GPIO_ReadPin(M5_E2_GPIO_Port, M5_E2_Pin));
-    }
-    else if (pin == M6_E1_Pin)
-    {
-        mServo[5]->onEncoderEvent(!HAL_GPIO_ReadPin(M6_E2_GPIO_Port, M6_E2_Pin));
+        mController->onEncoderEvent(pin);
     }
 }
 
 void onZeroDetected(int index)
 {
-    // println("onZeroDetected: %d", index);
-    if (index >= 0 && index < SERVO_NUMS)
+    if (mController)
     {
-        mServo[index]->onZeroDectected();
+        mController->onZeroDetected(index);
     }
 }
 
 void onControllerInterrupt()
 {
-    if (!mServo[5])
+    if (mController)
     {
-        return;
-    }
-    for (int i = 0; i < SERVO_NUMS; i++)
-    {
-        mServo[i]->run();
+        mController->onControllerInterrupt();
     }
 }
 
@@ -101,94 +67,90 @@ bool onCommandReboot(string params)
 
 bool onCommandPosition(string params)
 {
-    if (params.empty())
-    {
-        println("Current position: %.6f", (float)mServo[0]->getCurrentPosition());
-        return true;
-    }
-    else
-    {
-        float setpoint = 0;
-        if (sscanf(params.c_str(), "%f", &setpoint) == 1)
-        {
-            mServo[0]->requestPosition(setpoint);
-            return true;
-        }
-    }
+    // if (params.empty())
+    // {
+    //     println("Current position: %.6f", (float)mServo[0]->getCurrentPosition());
+    //     return true;
+    // }
+    // else
+    // {
+    //     float setpoint = 0;
+    //     if (sscanf(params.c_str(), "%f", &setpoint) == 1)
+    //     {
+    //         mServo[0]->requestPosition(setpoint);
+    //         return true;
+    //     }
+    // }
     return false;
 }
 
 bool onCommandResetServo(string params)
 {
-    for (int i = 0; i < SERVO_NUMS; i++)
-    {
-        mServo[i]->reset();
-    }
+    // for (int i = 0; i < SERVO_NUMS; i++)
+    // {
+    //     mServo[i]->reset();
+    // }
     return true;
 }
 
 bool onCommandTune(string params)
 {
-    float kp = 0, ki = 0, kd = 0;
-    int ret = sscanf(params.c_str(), "%f %f %f", &kp, &ki, &kd);
-    if (ret >= 1 && ret <= 3)
-    {
-        println("PID tune: kp=%.2f ki=%.2f kd=%.2f", kp, ki, kd);
-        PidParams params{kp, ki, kd};
-        mServo[0]->tune(params);
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    // float kp = 0, ki = 0, kd = 0;
+    // int ret = sscanf(params.c_str(), "%f %f %f", &kp, &ki, &kd);
+    // if (ret >= 1 && ret <= 3)
+    // {
+    //     println("PID tune: kp=%.2f ki=%.2f kd=%.2f", kp, ki, kd);
+    //     PidParams params{kp, ki, kd};
+    //     mServo[0]->tune(params);
+    //     return true;
+    // }
+    // else
+    // {
+    //     return false;
+    // }
+	return false;
 }
 
 bool onCommandEnable(string params)
 {
-    if (params == "on")
-    {
-        println("Servo is enabled");
-        for (int i = 0; i < SERVO_NUMS; i++)
-        {
-            mServo[i]->setEnable(true);
-        }
-        return true;
-    }
-    else if (params == "off")
-    {
-        println("Servo is disabled");
-        for (int i = 0; i < SERVO_NUMS; i++)
-        {
-            mServo[i]->setEnable(false);
-        }
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    // if (params == "on")
+    // {
+    //     println("Servo is enabled");
+    //     for (int i = 0; i < SERVO_NUMS; i++)
+    //     {
+    //         mServo[i]->setEnable(true);
+    //     }
+    //     return true;
+    // }
+    // else if (params == "off")
+    // {
+    //     println("Servo is disabled");
+    //     for (int i = 0; i < SERVO_NUMS; i++)
+    //     {
+    //         mServo[i]->setEnable(false);
+    //     }
+    //     return true;
+    // }
+    // else
+    // {
+    //     return false;
+    // }
+	return false;
 }
 
 bool onCommandZeroDetect(string params)
 {
-    if (!params.empty())
-    {
-        return false;
-    }
-    mServo[0]->zeroDetect();
+    // if (!params.empty())
+    // {
+    //     return false;
+    // }
+    // mServo[0]->zeroDetect();
     return true;
 }
 
 void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
-    mDeviceController = new DeviceController(hspi);
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
+    mController = new DeviceController(htim1, htim2, htim3, hspi);
 
     println("");
     println("*** Robot Arm ***");
@@ -203,5 +165,5 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
 
 void loop()
 {
-    mDeviceController->run();
+    mController->run();
 }

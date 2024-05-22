@@ -1,8 +1,9 @@
 #ifndef INC_DEVICECONTROLLER_H_
 #define INC_DEVICECONTROLLER_H_
 
-#include "main.h"
 #include <string>
+#include "main.h"
+#include "Servo.h"
 
 using namespace std;
 
@@ -30,6 +31,8 @@ enum DeviceState
     STATE_CONNECTED,
 };
 
+#define SERVO_NUMS (6)
+
 class DeviceController
 {
 private:
@@ -38,9 +41,16 @@ private:
     SPI_HandleTypeDef *mHspi;
     DeviceState mState;
     uint32_t mLastTime;
+    bool mIsPinging;
+
+    Servo *mServo[SERVO_NUMS];
 
 public:
-    DeviceController(SPI_HandleTypeDef *hspi);
+    DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi);
+
+    void onEncoderEvent(uint16_t pin);
+    void onZeroDetected(int index);
+    void onControllerInterrupt();
 
     void onDataReceived();
     void onDataError();
@@ -53,6 +63,7 @@ private:
     void setState(DeviceState state);
     void createDataFrame(DataFrame &dataFrame, uint8_t command, const uint8_t *data, size_t length);
     DeviceState verifyDataFrame(const DataFrame &frame);
+    void handleData();
 };
 
 #endif /* INC_DEVICECONTROLLER_H_ */

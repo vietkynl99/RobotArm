@@ -9,15 +9,22 @@
 #define CMD_RESPONSE_PING 101
 #define CMD_RESPONSE_DATA_ERROR 102
 
-DeviceController::DeviceController(SPI_HandleTypeDef *hspi)
+DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
-    mHspi = hspi;
-    mLastTime = 0;
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
 
     memset(&mTxDataFrame, 0, sizeof(DataFrame));
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
     setState(STATE_DISCONNECTED);
+    mLastTime = 0;
+    mIsPinging = false;
 
+    mHspi = hspi;
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
 }
 
@@ -61,12 +68,9 @@ void DeviceController::setState(DeviceState state)
     if (mState != state)
     {
         mState = state;
-        if (mState == STATE_CONNECTED)
+        if (mState != STATE_CONNECTED)
         {
-            createDataFrame(mTxDataFrame, CMD_RESPONSE_PING, nullptr, 0);
-        }
-        else
-        {
+            mIsPinging = false;
             createDataFrame(mTxDataFrame, CMD_RESPONSE_DATA_ERROR, nullptr, 0);
         }
         println("Status changed to %d", mState);
@@ -109,12 +113,71 @@ DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
     return STATE_CONNECTED;
 }
 
+void DeviceController::onEncoderEvent(uint16_t pin)
+{
+    if (pin == M1_E1_Pin)
+    {
+        mServo[0]->onEncoderEvent(!HAL_GPIO_ReadPin(M1_E2_GPIO_Port, M1_E2_Pin));
+    }
+    else if (pin == M2_E1_Pin)
+    {
+        mServo[1]->onEncoderEvent(!HAL_GPIO_ReadPin(M2_E2_GPIO_Port, M2_E2_Pin));
+    }
+    else if (pin == M3_E1_Pin)
+    {
+        mServo[2]->onEncoderEvent(!HAL_GPIO_ReadPin(M3_E2_GPIO_Port, M3_E2_Pin));
+    }
+    else if (pin == M4_E1_Pin)
+    {
+        mServo[3]->onEncoderEvent(!HAL_GPIO_ReadPin(M4_E2_GPIO_Port, M4_E2_Pin));
+    }
+    else if (pin == M5_E1_Pin)
+    {
+        mServo[4]->onEncoderEvent(!HAL_GPIO_ReadPin(M5_E2_GPIO_Port, M5_E2_Pin));
+    }
+    else if (pin == M6_E1_Pin)
+    {
+        mServo[5]->onEncoderEvent(!HAL_GPIO_ReadPin(M6_E2_GPIO_Port, M6_E2_Pin));
+    }
+}
+
+void DeviceController::onZeroDetected(int index)
+{
+    // println("onZeroDetected: %d", index);
+    if (index >= 0 && index < SERVO_NUMS)
+    {
+        mServo[index]->onZeroDectected();
+    }
+}
+
+void DeviceController::onControllerInterrupt()
+{
+    for (int i = 0; i < SERVO_NUMS; i++)
+    {
+        mServo[i]->run();
+    }
+}
+
 void DeviceController::onDataReceived()
 {
     mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
     DeviceState state = verifyDataFrame(mRxDataFrame);
     // println("received: %s -> state: %d", getString(mRxDataFrame).c_str(), state);
     setState(state);
+
+    if (state == STATE_CONNECTED)
+    {
+        switch (mRxDataFrame.command)
+        {
+        default:
+            if (!mIsPinging)
+            {
+                mIsPinging = true;
+                createDataFrame(mTxDataFrame, CMD_RESPONSE_PING, nullptr, 0);
+            }
+            break;
+        }
+    }
 
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
 }
