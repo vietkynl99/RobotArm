@@ -13,7 +13,6 @@ using namespace std;
 
 DeviceController *mDeviceController;
 Servo *mServo[SERVO_NUMS];
-bool mLogEnabled = false;
 
 void onUartDataReceived(char ch)
 {
@@ -128,28 +127,6 @@ bool onCommandResetServo(string params)
     return true;
 }
 
-bool onCommandPlot(string params)
-{
-    if (params == "on")
-    {
-        if (!mLogEnabled)
-        {
-            mLogEnabled = true;
-            printlnLog("RequestedPosition,CurrentPosition,ControlValue");
-        }
-        return true;
-    }
-    else if (params == "off")
-    {
-        mLogEnabled = false;
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
 bool onCommandTune(string params)
 {
     float kp = 0, ki = 0, kd = 0;
@@ -217,7 +194,6 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
     println("*** Robot Arm ***");
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
-    CommandLine::install("plot", onCommandPlot, "plot [on/off]\t: turn on/off servo motor plotter");
     CommandLine::install("position", onCommandPosition, "position [value]\t: rotate the servo to position\r\nservo-position\t: get current position");
     CommandLine::install("reset", onCommandResetServo, "reset\t: reset servo data");
     CommandLine::install("tune", onCommandTune, "tune [kp] [ki] [kd]\t: set pid controller params");
@@ -227,13 +203,5 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
 
 void loop()
 {
-    static uint32_t timeTick = 0;
-
     mDeviceController->run();
-
-    if (mLogEnabled && HAL_GetTick() > timeTick)
-    {
-        timeTick = HAL_GetTick() + SERVO_LOG_INTERVAL_MS;
-        printlnLog("%.2f %.2f %.2f", mServo[0]->getRequestedPosition(), mServo[0]->getCurrentPosition(), 100 * mServo[0]->getControlValue() / SERVO_PWM_RESOLUTION);
-    }
 }

@@ -131,8 +131,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   // UART
-  setCmdUartHandler(&huart1);
-  setLogUartHandler(&huart1);
+  setUartHandler(&huart1);
   HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
 
   // cpp code
