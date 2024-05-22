@@ -16,7 +16,7 @@ DeviceController::DeviceController(SPI_HandleTypeDef *hspi)
 
     memset(&mTxDataFrame, 0, sizeof(DataFrame));
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
-    setStatus(STATUS_DISCONNECTED);
+    setState(STATE_DISCONNECTED);
 
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
 }
@@ -56,12 +56,12 @@ bool DeviceController::verifyChecksum(const uint8_t *data, size_t length, uint8_
     return sum == 0;
 }
 
-void DeviceController::setStatus(DeviceStatus status)
+void DeviceController::setState(DeviceState state)
 {
-    if (mStatus != status)
+    if (mState != state)
     {
-        mStatus = status;
-        if (mStatus == STATUS_CONNECTED)
+        mState = state;
+        if (mState == STATE_CONNECTED)
         {
             createDataFrame(mTxDataFrame, CMD_RESPONSE_PING, nullptr, 0);
         }
@@ -69,7 +69,7 @@ void DeviceController::setStatus(DeviceStatus status)
         {
             createDataFrame(mTxDataFrame, CMD_RESPONSE_DATA_ERROR, nullptr, 0);
         }
-        println("Status changed to %d", mStatus);
+        println("Status changed to %d", mState);
     }
 }
 
@@ -85,7 +85,7 @@ void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, co
     dataFrame.checksum = calculateChecksum(dataFrame.rawData, SPI_FRAME_SIZE - 1);
 }
 
-DeviceStatus DeviceController::verifyDataFrame(const DataFrame &frame)
+DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
 {
     if (frame.start == 0)
     {
@@ -93,28 +93,28 @@ DeviceStatus DeviceController::verifyDataFrame(const DataFrame &frame)
         {
             if (frame.rawData[i] != 0)
             {
-                return STATUS_DATA_ERROR;
+                return STATE_DATA_ERROR;
             }
         }
-        return STATUS_DISCONNECTED;
+        return STATE_DISCONNECTED;
     }
     else if (frame.start != SPI_DATA_START_BYTE)
     {
-        return STATUS_DATA_ERROR;
+        return STATE_DATA_ERROR;
     }
     if (!verifyChecksum(frame.rawData, SPI_FRAME_SIZE - 1, frame.checksum))
     {
-        return STATUS_DATA_ERROR;
+        return STATE_DATA_ERROR;
     }
-    return STATUS_CONNECTED;
+    return STATE_CONNECTED;
 }
 
 void DeviceController::onDataReceived()
 {
     mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
-    DeviceStatus status = verifyDataFrame(mRxDataFrame);
-    println("received: %s -> status: %d", getString(mRxDataFrame).c_str(), status);
-    setStatus(status);
+    DeviceState state = verifyDataFrame(mRxDataFrame);
+    println("received: %s -> state: %d", getString(mRxDataFrame).c_str(), state);
+    setState(state);
 
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
 }
@@ -122,7 +122,7 @@ void DeviceController::onDataReceived()
 void DeviceController::onDataError()
 {
     // println("onDataError");
-    setStatus(STATUS_DISCONNECTED);
+    setState(STATE_DISCONNECTED);
 
     HAL_SPI_DeInit(mHspi);
     asm("nop");
@@ -145,10 +145,10 @@ void DeviceController::onDataError()
 
 void DeviceController::run()
 {
-    if (mStatus != STATUS_DISCONNECTED && HAL_GetTick() > mLastTime)
+    if (mState != STATE_DISCONNECTED && HAL_GetTick() > mLastTime)
     {
         // println("Timeout...");
         mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
-        setStatus(STATUS_DISCONNECTED);
+        setState(STATE_DISCONNECTED);
     }
 }
