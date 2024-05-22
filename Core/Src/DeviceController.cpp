@@ -4,13 +4,17 @@
 
 #define CONNECTION_TIMEOUT 1000
 
-#define CMD_REQUEST_PING 1
-
-#define CMD_RESPONSE_PING 101
-#define CMD_RESPONSE_DATA_ERROR 102
+#define DEBUG_FRAME_DATA (1)
 
 DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
+#if DEBUG_FRAME_DATA
+    if (sizeof(DataFrame) != SPI_FRAME_SIZE)
+    {
+        println("Error !!! DataFrame is not a valid size (%d)", sizeof(DataFrame));
+    }
+#endif
+
     mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
     mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
     mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
@@ -22,7 +26,7 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
     setState(STATE_DISCONNECTED);
     mLastTime = 0;
-    mIsPinging = false;
+    mAutoGetData = false;
 
     mHspi = hspi;
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
@@ -70,23 +74,27 @@ void DeviceController::setState(DeviceState state)
         mState = state;
         if (mState != STATE_CONNECTED)
         {
-            mIsPinging = false;
-            createDataFrame(mTxDataFrame, CMD_RESPONSE_DATA_ERROR, nullptr, 0);
+            createDataFrame(mTxDataFrame, CMD_RESP_DATA_ERROR, nullptr, 0);
         }
         println("Status changed to %d", mState);
     }
 }
 
+void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command)
+{
+    dataFrame.start = SPI_DATA_START_BYTE;
+    dataFrame.command = command;
+    dataFrame.checksum = calculateChecksum(dataFrame.rawData, SPI_FRAME_SIZE - 1);
+}
+
 void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, const uint8_t *data, size_t length)
 {
     memset(&dataFrame, 0, sizeof(DataFrame));
-    dataFrame.start = SPI_DATA_START_BYTE;
-    dataFrame.command = command;
     if (data && length > 0 && length <= SPI_DATA_SIZE)
     {
         memcpy(dataFrame.data, data, length);
     }
-    dataFrame.checksum = calculateChecksum(dataFrame.rawData, SPI_FRAME_SIZE - 1);
+    createDataFrame(dataFrame, command);
 }
 
 DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
@@ -97,17 +105,29 @@ DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
         {
             if (frame.rawData[i] != 0)
             {
+#if DEBUG_FRAME_DATA
+                println("Data frame error");
+#endif
                 return STATE_DATA_ERROR;
             }
         }
+#if DEBUG_FRAME_DATA
+        println("No data error");
+#endif
         return STATE_DISCONNECTED;
     }
     else if (frame.start != SPI_DATA_START_BYTE)
     {
+#if DEBUG_FRAME_DATA
+        println("Start byte error");
+#endif
         return STATE_DATA_ERROR;
     }
     if (!verifyChecksum(frame.rawData, SPI_FRAME_SIZE - 1, frame.checksum))
     {
+#if DEBUG_FRAME_DATA
+        println("Checksum error");
+#endif
         return STATE_DATA_ERROR;
     }
     return STATE_CONNECTED;
@@ -162,18 +182,30 @@ void DeviceController::onDataReceived()
 {
     mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
     DeviceState state = verifyDataFrame(mRxDataFrame);
-    // println("received: %s -> state: %d", getString(mRxDataFrame).c_str(), state);
+#if DEBUG_FRAME_DATA
+    println("received: %s -> state: %d", getString(mRxDataFrame).c_str(), state);
+#endif
     setState(state);
 
     if (state == STATE_CONNECTED)
     {
         switch (mRxDataFrame.command)
         {
+        case CMD_REQ_SET_AUTO_GET_SERVO_DATA:
+            mAutoGetData = mRxDataFrame.data[0] != 0;
+            break;
         default:
-            if (!mIsPinging)
+            if (mAutoGetData)
             {
-                mIsPinging = true;
-                createDataFrame(mTxDataFrame, CMD_RESPONSE_PING, nullptr, 0);
+                // for (int i = 0; i < SERVO_NUMS; i++)
+                // {
+                //     mTxDataFrame.servoPosition[i] = mServo[i]->getCurrentPosition();
+                // }
+                // createDataFrame(mTxDataFrame, CMD_RESP_SERVO_DATA);
+            }
+            else if (mTxDataFrame.command != CMD_RESP_PING)
+            {
+                createDataFrame(mTxDataFrame, CMD_RESP_PING, nullptr, 0);
             }
             break;
         }

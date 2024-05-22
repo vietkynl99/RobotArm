@@ -150,8 +150,6 @@ bool onCommandZeroDetect(string params)
 
 void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
-    mController = new DeviceController(htim1, htim2, htim3, hspi);
-
     println("");
     println("*** Robot Arm ***");
     CommandLine::init();
@@ -161,6 +159,8 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
     CommandLine::install("tune", onCommandTune, "tune [kp] [ki] [kd]\t: set pid controller params");
     CommandLine::install("enable", onCommandEnable, "enable [on/off]\t: turn on/off servo");
     CommandLine::install("zero-detect", onCommandZeroDetect, "zero-detect\t: Zero dectection");
+
+    mController = new DeviceController(htim1, htim2, htim3, hspi);
 }
 
 void loop()

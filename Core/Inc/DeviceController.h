@@ -7,6 +7,8 @@
 
 using namespace std;
 
+#define SERVO_NUMS (6)
+
 #define SPI_DATA_SIZE 			(24)
 #define SPI_FRAME_SIZE 			(SPI_DATA_SIZE + 4)
 #define SPI_DATA_START_BYTE 	(0x99D7)
@@ -18,7 +20,7 @@ typedef union
 	{
 		uint16_t start;
 		uint8_t command;
-		uint8_t data[SPI_DATA_SIZE];
+        uint8_t data[SPI_DATA_SIZE];
 		uint8_t checksum;
 	};
 } DataFrame;
@@ -31,7 +33,18 @@ enum DeviceState
     STATE_CONNECTED,
 };
 
-#define SERVO_NUMS (6)
+enum RequestCommand
+{
+    CMD_REQ_PING = 1,
+    CMD_REQ_SET_AUTO_GET_SERVO_DATA
+};
+
+enum ResponseCommand
+{
+    CMD_RESP_PING = 101,
+    CMD_RESP_DATA_ERROR,
+    CMD_RESP_SERVO_DATA
+};
 
 class DeviceController
 {
@@ -41,7 +54,7 @@ private:
     SPI_HandleTypeDef *mHspi;
     DeviceState mState;
     uint32_t mLastTime;
-    bool mIsPinging;
+    bool mAutoGetData;
 
     Servo *mServo[SERVO_NUMS];
 
@@ -61,6 +74,7 @@ private:
     uint8_t calculateChecksum(const uint8_t *data, size_t length);
     bool verifyChecksum(const uint8_t *data, size_t length, uint8_t checksum);
     void setState(DeviceState state);
+    void createDataFrame(DataFrame &dataFrame, uint8_t command);
     void createDataFrame(DataFrame &dataFrame, uint8_t command, const uint8_t *data, size_t length);
     DeviceState verifyDataFrame(const DataFrame &frame);
     void handleData();
