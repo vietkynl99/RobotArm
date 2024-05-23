@@ -82,7 +82,7 @@ void DeviceController::setState(DeviceState state)
 
 void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command)
 {
-    dataFrame.start = SPI_DATA_START_BYTE;
+    dataFrame.key = SPI_DATA_KEY_BYTE;
     dataFrame.command = command;
     dataFrame.checksum = calculateChecksum(dataFrame.rawData, SPI_FRAME_SIZE - 1);
 }
@@ -99,7 +99,7 @@ void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, co
 
 DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
 {
-    if (frame.start == 0)
+    if (frame.key == 0)
     {
         for (int i = 0; i < SPI_FRAME_SIZE; i++)
         {
@@ -116,7 +116,7 @@ DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
 #endif
         return STATE_DISCONNECTED;
     }
-    else if (frame.start != SPI_DATA_START_BYTE)
+    else if (frame.key != SPI_DATA_KEY_BYTE)
     {
 #if DEBUG_FRAME_DATA
         println("Start byte error");

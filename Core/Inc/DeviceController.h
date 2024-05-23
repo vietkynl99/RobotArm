@@ -11,18 +11,27 @@ using namespace std;
 
 #define SPI_DATA_SIZE 			(24)
 #define SPI_FRAME_SIZE 			(SPI_DATA_SIZE + 4)
-#define SPI_DATA_START_BYTE 	(0x99D7)
+#define SPI_DATA_KEY_BYTE 	    (0x99D7)
+
+typedef struct
+{
+    int32_t position[SERVO_NUMS];
+} ServoData;
 
 typedef union
 {
-	uint8_t rawData[SPI_FRAME_SIZE];
-	struct
-	{
-		uint16_t start;
-		uint8_t command;
-        uint8_t data[SPI_DATA_SIZE];
-		uint8_t checksum;
-	};
+    uint8_t rawData[SPI_FRAME_SIZE];
+    struct
+    {
+        union
+        {
+            uint8_t data[SPI_DATA_SIZE];
+            ServoData servoData;
+        };
+        uint16_t key;
+        uint8_t command;
+        uint8_t checksum;
+    };
 } DataFrame;
 
 enum DeviceState
