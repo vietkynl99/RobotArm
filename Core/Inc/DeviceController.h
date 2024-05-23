@@ -2,37 +2,37 @@
 #define INC_DEVICECONTROLLER_H_
 
 #include <string>
+#include <cassert>
 #include "main.h"
 #include "Servo.h"
 
 using namespace std;
 
-#define SERVO_NUMS (6)
+#define SERVO_NUMS          (6)
 
-#define SPI_DATA_SIZE 			(24)
-#define SPI_FRAME_SIZE 			(SPI_DATA_SIZE + 4)
-#define SPI_DATA_KEY_BYTE 	    (0x99D7)
+#define SPI_DATA_SIZE       (24)
+#define SPI_FRAME_SIZE      (SPI_DATA_SIZE + 5)
+#define SPI_DATA_KEY1 	    (0x99)
+#define SPI_DATA_KEY2       (0xD7)
 
 typedef struct
 {
-    int32_t position[SERVO_NUMS];
-} ServoData;
+	uint8_t unused;
+	uint8_t key1;
+	uint8_t key2;
+	uint8_t command;
+	uint8_t data[SPI_DATA_SIZE];
+	uint8_t checksum;
+} PackedData;
 
 typedef union
 {
-    uint8_t rawData[SPI_FRAME_SIZE];
-    struct
-    {
-        union
-        {
-            uint8_t data[SPI_DATA_SIZE];
-            ServoData servoData;
-        };
-        uint16_t key;
-        uint8_t command;
-        uint8_t checksum;
-    };
+	uint8_t frame[SPI_FRAME_SIZE];
+	PackedData pack;
 } DataFrame;
+
+static_assert(sizeof(PackedData) == SPI_FRAME_SIZE);
+static_assert(sizeof(DataFrame) == SPI_FRAME_SIZE);
 
 enum DeviceState
 {
@@ -51,8 +51,9 @@ enum RequestCommand
 enum ResponseCommand
 {
     CMD_RESP_PING = 101,
-    CMD_RESP_DATA_ERROR,
-    CMD_RESP_SERVO_DATA
+    CMD_RESP_SET_AUTO_GET_SERVO_DATA,
+    CMD_RESP_DATA_ERROR = 200,
+    CMD_RESP_SERVO_DATA,
 };
 
 class DeviceController

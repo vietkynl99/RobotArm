@@ -4,17 +4,10 @@
 
 #define CONNECTION_TIMEOUT 1000
 
-#define DEBUG_FRAME_DATA (1)
+#define DEBUG_FRAME_DATA (0)
 
 DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
-#if DEBUG_FRAME_DATA
-    if (sizeof(DataFrame) != SPI_FRAME_SIZE)
-    {
-        println("Error !!! DataFrame is not a valid size (%d)", sizeof(DataFrame));
-    }
-#endif
-
     mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
     mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
     mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
@@ -29,7 +22,7 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
     mAutoGetData = false;
 
     mHspi = hspi;
-    HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
+    HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.frame, mRxDataFrame.frame, SPI_FRAME_SIZE);
 }
 
 string DeviceController::getString(const DataFrame &frame)
@@ -41,7 +34,7 @@ string DeviceController::getString(const DataFrame &frame)
         {
             str += ".";
         }
-        str += to_string(frame.rawData[i]);
+        str += to_string(frame.frame[i]);
     }
     return str;
 }
@@ -82,9 +75,10 @@ void DeviceController::setState(DeviceState state)
 
 void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command)
 {
-    dataFrame.key = SPI_DATA_KEY_BYTE;
-    dataFrame.command = command;
-    dataFrame.checksum = calculateChecksum(dataFrame.rawData, SPI_FRAME_SIZE - 1);
+    dataFrame.pack.key1 = SPI_DATA_KEY1;
+    dataFrame.pack.key2 = SPI_DATA_KEY2;
+    dataFrame.pack.command = command;
+    dataFrame.pack.checksum = calculateChecksum(dataFrame.frame, SPI_FRAME_SIZE - 1);
 }
 
 void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, const uint8_t *data, size_t length)
@@ -92,18 +86,18 @@ void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, co
     memset(&dataFrame, 0, sizeof(DataFrame));
     if (data && length > 0 && length <= SPI_DATA_SIZE)
     {
-        memcpy(dataFrame.data, data, length);
+        memcpy(dataFrame.pack.data, data, length);
     }
     createDataFrame(dataFrame, command);
 }
 
 DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
 {
-    if (frame.key == 0)
+    if (!frame.pack.key1 || !frame.pack.key2)
     {
         for (int i = 0; i < SPI_FRAME_SIZE; i++)
         {
-            if (frame.rawData[i] != 0)
+            if (frame.frame[i] != 0)
             {
 #if DEBUG_FRAME_DATA
                 println("Data frame error");
@@ -116,14 +110,14 @@ DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
 #endif
         return STATE_DISCONNECTED;
     }
-    else if (frame.key != SPI_DATA_KEY_BYTE)
+    else if (frame.pack.key1 != SPI_DATA_KEY1 || frame.pack.key2 != SPI_DATA_KEY2)
     {
 #if DEBUG_FRAME_DATA
-        println("Start byte error");
+        println("Key byte error");
 #endif
         return STATE_DATA_ERROR;
     }
-    if (!verifyChecksum(frame.rawData, SPI_FRAME_SIZE - 1, frame.checksum))
+    if (!verifyChecksum(frame.frame, SPI_FRAME_SIZE - 1, frame.pack.checksum))
     {
 #if DEBUG_FRAME_DATA
         println("Checksum error");
@@ -189,29 +183,41 @@ void DeviceController::onDataReceived()
 
     if (state == STATE_CONNECTED)
     {
-        switch (mRxDataFrame.command)
+        switch (mRxDataFrame.pack.command)
         {
         case CMD_REQ_SET_AUTO_GET_SERVO_DATA:
-            mAutoGetData = mRxDataFrame.data[0] != 0;
+        {
+            mAutoGetData = mRxDataFrame.pack.data[0] != 0;
+            println("mAutoGetData -> %d", mAutoGetData);
+
+            memset(&mTxDataFrame, 0, sizeof(DataFrame));
+            mTxDataFrame.pack.data[0] = mAutoGetData;
+            createDataFrame(mTxDataFrame, CMD_RESP_SET_AUTO_GET_SERVO_DATA);
             break;
+        }
         default:
+        {
             if (mAutoGetData)
             {
-                // for (int i = 0; i < SERVO_NUMS; i++)
-                // {
-                //     mTxDataFrame.servoPosition[i] = mServo[i]->getCurrentPosition();
-                // }
-                // createDataFrame(mTxDataFrame, CMD_RESP_SERVO_DATA);
+                for (int i = 0; i < SERVO_NUMS; i++)
+                {
+                    int32_t packedPosition = 100 * (mServo[i]->getCurrentPosition());
+                    memcpy(mTxDataFrame.pack.data + 4 * i, &packedPosition, 4);
+                }
+                createDataFrame(mTxDataFrame, CMD_RESP_SERVO_DATA);
             }
-            else if (mTxDataFrame.command != CMD_RESP_PING)
+            else if (mTxDataFrame.pack.command != CMD_RESP_PING)
             {
                 createDataFrame(mTxDataFrame, CMD_RESP_PING, nullptr, 0);
             }
             break;
         }
+        }
     }
 
-    HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
+#if DEBUG_FRAME_DATA
+    println("send: %s", getString(mTxDataFrame).c_str());
+#endif
 }
 
 void DeviceController::onDataError()
@@ -234,8 +240,6 @@ void DeviceController::onDataError()
     HAL_SPI_DMAStop(mHspi);
     asm("nop");
     asm("nop");
-
-    HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.rawData, mRxDataFrame.rawData, SPI_FRAME_SIZE);
 }
 
 void DeviceController::run()
