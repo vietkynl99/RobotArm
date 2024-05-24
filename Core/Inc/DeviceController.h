@@ -15,6 +15,11 @@ using namespace std;
 #define SPI_DATA_KEY1 	    (0x99)
 #define SPI_DATA_KEY2       (0xD7)
 
+typedef union
+{
+	int32_t position[SERVO_NUMS];
+} ServoData;
+
 typedef struct
 {
 	uint8_t unused;
@@ -31,6 +36,7 @@ typedef union
 	PackedData pack;
 } DataFrame;
 
+static_assert(sizeof(ServoData) == SPI_DATA_SIZE);
 static_assert(sizeof(PackedData) == SPI_FRAME_SIZE);
 static_assert(sizeof(DataFrame) == SPI_FRAME_SIZE);
 

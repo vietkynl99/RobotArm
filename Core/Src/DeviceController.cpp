@@ -199,11 +199,12 @@ void DeviceController::onDataReceived()
         {
             if (mAutoGetData)
             {
+                ServoData servoData;
                 for (int i = 0; i < SERVO_NUMS; i++)
                 {
-                    int32_t packedPosition = 100 * (mServo[i]->getCurrentPosition());
-                    memcpy(mTxDataFrame.pack.data + 4 * i, &packedPosition, 4);
+                    servoData.position[i] = 100 * (mServo[i]->getCurrentPosition());
                 }
+                memcpy(mTxDataFrame.pack.data, &servoData, SPI_DATA_SIZE);
                 createDataFrame(mTxDataFrame, CMD_RESP_SERVO_DATA);
             }
             else if (mTxDataFrame.pack.command != CMD_RESP_PING)
