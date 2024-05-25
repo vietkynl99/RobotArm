@@ -3,11 +3,17 @@
 
 #define ZERO_DETECTION_SPEED_PERCENT (0.25)
 
+#define DISABLE_ZERO_DETECTION (1)
+
 Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp, double ki, double kd)
 {
     mEnabled = true;
     mIsZeroDetecting = false;
+#if DISABLE_ZERO_DETECTION
+    mZeroChecked = true;
+#else
     mZeroChecked = false;
+#endif
     mMinPosition = minPosition;
     mMaxPosition = maxPosition;
     mZeroPosition = zeroPosition;
@@ -112,6 +118,7 @@ void Servo::reset(double position)
 
 void Servo::zeroDetect()
 {
+#if !DISABLE_ZERO_DETECTION
     if (mEnabled && !mIsZeroDetecting)
     {
         println("Zero dectect is running...");
@@ -119,6 +126,7 @@ void Servo::zeroDetect()
         mZeroChecked = false;
         setOutput(SERVO_PWM_RESOLUTION * ZERO_DETECTION_SPEED_PERCENT);
     }
+#endif
 }
 
 double Servo::map(double input, double inMin, double inMax, double outMin, double outMax)

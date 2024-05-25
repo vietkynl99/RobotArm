@@ -191,12 +191,14 @@ void setup(TIM_HandleTypeDef *htim, SPI_HandleTypeDef *hspi)
 void loop()
 {
     static uint32_t timeTick = 0;
+    static double position = 0;
 
     mDeviceController->run();
 
-    if (mLogEnabled && HAL_GetTick() > timeTick)
+    if (HAL_GetTick() > timeTick && position != mServo->getCurrentPosition())
     {
-        timeTick = HAL_GetTick() + SERVO_LOG_INTERVAL_MS;
+        timeTick = HAL_GetTick() + 2;
+        position = mServo->getCurrentPosition();
         printlnLog("%.2f %.2f %.2f", mServo->getRequestedPosition(), mServo->getCurrentPosition(), 100 * mServo->getControlValue() / SERVO_PWM_RESOLUTION);
     }
 }
