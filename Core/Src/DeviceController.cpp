@@ -67,7 +67,7 @@ void DeviceController::setState(DeviceState state)
         mState = state;
         if (mState != STATE_CONNECTED)
         {
-            createDataFrame(mTxDataFrame, CMD_RESP_DATA_ERROR, nullptr, 0);
+            createDataFrame(mTxDataFrame, CMD_DATA_ERROR, nullptr, 0);
         }
         println("Status changed to %d", mState);
     }
@@ -81,13 +81,20 @@ void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command)
     dataFrame.pack.checksum = calculateChecksum(dataFrame.frame, SPI_FRAME_SIZE - 1);
 }
 
-void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, const uint8_t *data, size_t length)
+void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, const void *data, size_t length)
 {
     memset(&dataFrame, 0, sizeof(DataFrame));
     if (data && length > 0 && length <= SPI_DATA_SIZE)
     {
         memcpy(dataFrame.pack.data, data, length);
     }
+    createDataFrame(dataFrame, command);
+}
+
+void DeviceController::createResponseDataFrame(DataFrame &dataFrame, uint8_t command, bool isSuccess)
+{
+    memset(&dataFrame, 0, sizeof(DataFrame));
+    dataFrame.pack.responseCode = isSuccess ? RESP_CODE_SUCCESS : RESP_CODE_ERROR;
     createDataFrame(dataFrame, command);
 }
 
@@ -183,36 +190,64 @@ void DeviceController::onDataReceived()
 
     if (state == STATE_CONNECTED)
     {
+        bool isSuccess = false;
+        bool isHandled = true;
+
         switch (mRxDataFrame.pack.command)
         {
-        case CMD_REQ_SET_AUTO_GET_SERVO_DATA:
+        case CMD_SET_AUTO_GET_SERVO_DATA:
         {
-            mAutoGetData = mRxDataFrame.pack.data[0] != 0;
+            mAutoGetData = mRxDataFrame.pack.data[0];
             println("mAutoGetData -> %d", mAutoGetData);
-
-            memset(&mTxDataFrame, 0, sizeof(DataFrame));
-            mTxDataFrame.pack.data[0] = mAutoGetData;
-            createDataFrame(mTxDataFrame, CMD_RESP_SET_AUTO_GET_SERVO_DATA);
+            isSuccess = true;
+            break;
+        }
+        case CMD_START_ZERO_DETECTION:
+        {
+            int index = mRxDataFrame.pack.data[0];
+            isSuccess = startZeroDetection(index);
+            break;
+        }
+        case CMD_SET_POSITION:
+        {
+            ServoReqData servoReqData;
+            memcpy(&servoReqData, mRxDataFrame.pack.data, sizeof(servoReqData));
+            println("servoReqData %d %.2f", servoReqData.index, servoReqData.position);
+            isSuccess = requestPosition(servoReqData.index, servoReqData.position);
             break;
         }
         default:
         {
+            isHandled = false;
+            break;
+        }
+        }
+
+        if (isHandled)
+        {
+            createResponseDataFrame(mTxDataFrame, mRxDataFrame.pack.command, isSuccess);
+        }
+        else
+        {
+            if (mRxDataFrame.pack.command != CMD_PING)
+            {
+                println("Unhanled command %d", mRxDataFrame.pack.command);
+            }
+
             if (mAutoGetData)
             {
                 ServoData servoData;
                 for (int i = 0; i < SERVO_NUMS; i++)
                 {
-                    servoData.position[i] = 100 * (mServo[i]->getCurrentPosition());
+                    servoData.position[i] = mServo[i]->getCurrentPosition();
                 }
                 memcpy(mTxDataFrame.pack.data, &servoData, SPI_DATA_SIZE);
-                createDataFrame(mTxDataFrame, CMD_RESP_SERVO_DATA);
+                createDataFrame(mTxDataFrame, CMD_SERVO_DATA);
             }
-            else if (mTxDataFrame.pack.command != CMD_RESP_PING)
+            else if (mTxDataFrame.pack.command != CMD_PING)
             {
-                createDataFrame(mTxDataFrame, CMD_RESP_PING, nullptr, 0);
+                createDataFrame(mTxDataFrame, CMD_PING, nullptr, 0);
             }
-            break;
-        }
         }
     }
 
@@ -251,4 +286,36 @@ void DeviceController::run()
         mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
         setState(STATE_DISCONNECTED);
     }
+}
+
+bool DeviceController::startZeroDetection(int index)
+{
+    if (index < 0 || index >= SERVO_NUMS)
+    {
+        println("Invalid servo index %d", index);
+        return false;
+    }
+    println("Servo %d start zero detection", index);
+    mServo[index]->zeroDetect();
+    return true;
+}
+
+bool DeviceController::requestPosition(int index, float position)
+{
+    if (index < 0 || index >= SERVO_NUMS)
+    {
+        println("Invalid servo index %d", index);
+        return false;
+    }
+    return mServo[index]->requestPosition(position);
+}
+
+float DeviceController::getCurrentPosition(int index)
+{
+    if (index < 0 || index >= SERVO_NUMS)
+    {
+        println("Invalid servo index %d", index);
+        return 0;
+    }
+    return mServo[index]->getCurrentPosition();
 }

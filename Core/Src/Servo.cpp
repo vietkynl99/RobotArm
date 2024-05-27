@@ -157,19 +157,20 @@ void Servo::setOutput(int value)
 }
 
 // Unit: degree
-void Servo::requestPosition(double postion)
+bool Servo::requestPosition(double postion)
 {
     if (!mZeroChecked)
     {
         println("Need to check zero position");
-        return;
+        return false;
     }
     if (postion > mMaxPosition || postion < mMinPosition)
     {
-        println("Out of range [%.2f; %.2f]", mMinPosition, mMaxPosition);
-        return;
+        println("%.2f out of range [%.2f; %.2f]", postion, mMinPosition, mMaxPosition);
+        return false;
     }
     mSetpoint = postion;
+    return true;
 }
 
 // Unit: degree

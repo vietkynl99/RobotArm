@@ -15,10 +15,22 @@ using namespace std;
 #define SPI_DATA_KEY1 	    (0x99)
 #define SPI_DATA_KEY2       (0xD7)
 
-typedef union
+typedef struct
 {
-	int32_t position[SERVO_NUMS];
+	float position;
+    uint8_t index;
+} ServoReqData;
+
+typedef struct
+{
+	float position[SERVO_NUMS];
 } ServoData;
+
+enum eResponsecode 
+{
+    RESP_CODE_SUCCESS = 100,
+    RESP_CODE_ERROR
+};
 
 typedef struct
 {
@@ -26,7 +38,11 @@ typedef struct
 	uint8_t key1;
 	uint8_t key2;
 	uint8_t command;
-	uint8_t data[SPI_DATA_SIZE];
+    union
+    {
+        uint8_t data[SPI_DATA_SIZE];
+        uint8_t responseCode;
+    };
 	uint8_t checksum;
 } PackedData;
 
@@ -36,7 +52,10 @@ typedef union
 	PackedData pack;
 } DataFrame;
 
-static_assert(sizeof(ServoData) == SPI_DATA_SIZE);
+static_assert(sizeof(float) == 4);
+static_assert(sizeof(ServoReqData) <= SPI_DATA_SIZE);
+static_assert(sizeof(ServoReqData) <= SPI_DATA_SIZE);
+static_assert(sizeof(ServoData) <= SPI_DATA_SIZE);
 static_assert(sizeof(PackedData) == SPI_FRAME_SIZE);
 static_assert(sizeof(DataFrame) == SPI_FRAME_SIZE);
 
@@ -48,18 +67,15 @@ enum DeviceState
     STATE_CONNECTED,
 };
 
-enum RequestCommand
+enum DataCommand
 {
-    CMD_REQ_PING = 1,
-    CMD_REQ_SET_AUTO_GET_SERVO_DATA
-};
+    CMD_PING = 1,
+    CMD_SET_AUTO_GET_SERVO_DATA,
+    CMD_START_ZERO_DETECTION,
+    CMD_SET_POSITION,
 
-enum ResponseCommand
-{
-    CMD_RESP_PING = 101,
-    CMD_RESP_SET_AUTO_GET_SERVO_DATA,
-    CMD_RESP_DATA_ERROR = 200,
-    CMD_RESP_SERVO_DATA,
+    CMD_DATA_ERROR = 200,
+    CMD_SERVO_DATA
 };
 
 class DeviceController
@@ -84,6 +100,10 @@ public:
     void onDataReceived();
     void onDataError();
     void run();
+
+    bool startZeroDetection(int index);
+    bool requestPosition(int index, float position);
+    float getCurrentPosition(int index);
     
 private:
     string getString(const DataFrame &frame);
@@ -91,7 +111,8 @@ private:
     bool verifyChecksum(const uint8_t *data, size_t length, uint8_t checksum);
     void setState(DeviceState state);
     void createDataFrame(DataFrame &dataFrame, uint8_t command);
-    void createDataFrame(DataFrame &dataFrame, uint8_t command, const uint8_t *data, size_t length);
+    void createDataFrame(DataFrame &dataFrame, uint8_t command, const void *data, size_t length);
+    void createResponseDataFrame(DataFrame &dataFrame, uint8_t command, bool isSuccess);
     DeviceState verifyDataFrame(const DataFrame &frame);
     void handleData();
 };

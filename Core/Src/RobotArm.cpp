@@ -67,20 +67,20 @@ bool onCommandReboot(string params)
 
 bool onCommandPosition(string params)
 {
-    // if (params.empty())
-    // {
-    //     println("Current position: %.6f", (float)mServo[0]->getCurrentPosition());
-    //     return true;
-    // }
-    // else
-    // {
-    //     float setpoint = 0;
-    //     if (sscanf(params.c_str(), "%f", &setpoint) == 1)
-    //     {
-    //         mServo[0]->requestPosition(setpoint);
-    //         return true;
-    //     }
-    // }
+    if (params.empty())
+    {
+        println("Current position: %.6f", mController->getCurrentPosition(0));
+        return true;
+    }
+    else
+    {
+        float setpoint = 0;
+        if (sscanf(params.c_str(), "%f", &setpoint) == 1)
+        {
+            mController->requestPosition(0, setpoint);
+            return true;
+        }
+    }
     return false;
 }
 
@@ -108,7 +108,7 @@ bool onCommandTune(string params)
     // {
     //     return false;
     // }
-	return false;
+    return false;
 }
 
 bool onCommandEnable(string params)
@@ -135,16 +135,16 @@ bool onCommandEnable(string params)
     // {
     //     return false;
     // }
-	return false;
+    return false;
 }
 
 bool onCommandZeroDetect(string params)
 {
-    // if (!params.empty())
-    // {
-    //     return false;
-    // }
-    // mServo[0]->zeroDetect();
+    if (!params.empty())
+    {
+        return false;
+    }
+    mController->startZeroDetection(0);
     return true;
 }
 

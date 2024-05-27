@@ -44,7 +44,7 @@ public:
     void run();
     void reset(double position = 0);
     void zeroDetect();
-    void requestPosition(double postion);
+    bool requestPosition(double postion);
 
     double getRequestedPosition();
     double getCurrentPosition();
