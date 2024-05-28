@@ -19,7 +19,7 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
     setState(STATE_DISCONNECTED);
     mLastTime = 0;
-    mAutoGetData = false;
+    mSettingsData.autoSend = false;
 
     mHspi = hspi;
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.frame, mRxDataFrame.frame, SPI_FRAME_SIZE);
@@ -195,10 +195,10 @@ void DeviceController::onDataReceived()
 
         switch (mRxDataFrame.pack.command)
         {
-        case CMD_SET_AUTO_GET_SERVO_DATA:
+        case CMD_SYNC_SETTINGS:
         {
-            mAutoGetData = mRxDataFrame.pack.data[0];
-            println("mAutoGetData -> %d", mAutoGetData);
+            memcpy(&mSettingsData, mRxDataFrame.pack.data, sizeof(SettingsData));
+            println("autoSend: %d", mSettingsData.autoSend);
             isSuccess = true;
             break;
         }
@@ -234,7 +234,7 @@ void DeviceController::onDataReceived()
                 println("Unhanled command %d", mRxDataFrame.pack.command);
             }
 
-            if (mAutoGetData)
+            if (mSettingsData.autoSend)
             {
                 ServoData servoData;
                 for (int i = 0; i < SERVO_NUMS; i++)

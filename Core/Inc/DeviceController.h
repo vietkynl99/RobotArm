@@ -15,6 +15,16 @@ using namespace std;
 #define SPI_DATA_KEY1 	    (0x99)
 #define SPI_DATA_KEY2       (0xD7)
 
+typedef struct SettingsData
+{
+    bool autoSend;
+
+    SettingsData()
+    {
+        autoSend = false;
+    }
+} SettingsData;
+
 typedef struct
 {
 	float position;
@@ -53,7 +63,7 @@ typedef union
 } DataFrame;
 
 static_assert(sizeof(float) == 4);
-static_assert(sizeof(ServoReqData) <= SPI_DATA_SIZE);
+static_assert(sizeof(SettingsData) <= SPI_DATA_SIZE);
 static_assert(sizeof(ServoReqData) <= SPI_DATA_SIZE);
 static_assert(sizeof(ServoData) <= SPI_DATA_SIZE);
 static_assert(sizeof(PackedData) == SPI_FRAME_SIZE);
@@ -70,9 +80,9 @@ enum DeviceState
 enum DataCommand
 {
     CMD_PING = 1,
-    CMD_SET_AUTO_GET_SERVO_DATA,
     CMD_START_ZERO_DETECTION,
     CMD_SET_POSITION,
+    CMD_SYNC_SETTINGS,
 
     CMD_DATA_ERROR = 200,
     CMD_SERVO_DATA
@@ -86,7 +96,7 @@ private:
     SPI_HandleTypeDef *mHspi;
     DeviceState mState;
     uint32_t mLastTime;
-    bool mAutoGetData;
+    SettingsData mSettingsData;
 
     Servo *mServo[SERVO_NUMS];
 
