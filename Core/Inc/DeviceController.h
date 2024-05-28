@@ -126,8 +126,8 @@ private:
     uint8_t calculateChecksum(const uint8_t *data, size_t length);
     bool verifyChecksum(const uint8_t *data, size_t length, uint8_t checksum);
     void setState(DeviceState state);
-    void createDataFrame(DataFrame &dataFrame, uint8_t command, uint8_t responseCode);
-    void createDataFrame(DataFrame &dataFrame, uint8_t command, const void *data, size_t length, uint8_t responseCode);
+    void create(DataFrame &dataFrame, uint8_t command, uint8_t responseCode);
+    void create(DataFrame &dataFrame, uint8_t command, const void *data, size_t length, uint8_t responseCode);
     DeviceState verifyDataFrame(const DataFrame &frame);
     void handleData();
 };

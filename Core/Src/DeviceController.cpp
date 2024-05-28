@@ -67,13 +67,13 @@ void DeviceController::setState(DeviceState state)
         mState = state;
         if (mState != STATE_CONNECTED)
         {
-            createDataFrame(mTxDataFrame, CMD_DATA_ERROR, nullptr, 0, RESP_CODE_ERROR);
+            create(mTxDataFrame, CMD_DATA_ERROR, nullptr, 0, RESP_CODE_ERROR);
         }
         println("Status changed to %d", mState);
     }
 }
 
-void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, uint8_t responseCode)
+void DeviceController::create(DataFrame &dataFrame, uint8_t command, uint8_t responseCode)
 {
     dataFrame.pack.key1 = SPI_DATA_KEY1;
     dataFrame.pack.key2 = SPI_DATA_KEY2;
@@ -82,14 +82,14 @@ void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, ui
     dataFrame.pack.checksum = calculateChecksum(dataFrame.frame, SPI_FRAME_SIZE - 1);
 }
 
-void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, const void *data, size_t length, uint8_t responseCode)
+void DeviceController::create(DataFrame &dataFrame, uint8_t command, const void *data, size_t length, uint8_t responseCode)
 {
     memset(&dataFrame, 0, sizeof(DataFrame));
     if (data && length > 0 && length <= SPI_DATA_SIZE)
     {
         memcpy(dataFrame.pack.data, data, length);
     }
-    createDataFrame(dataFrame, command, responseCode);
+    create(dataFrame, command, responseCode);
 }
 
 DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
@@ -224,7 +224,7 @@ void DeviceController::onDataReceived()
                 servoParamsData.index = index;
                 servoParamsData.minPosition = mServo[index]->getMinPostion();
                 servoParamsData.maxPosition = mServo[index]->getMaxPostion();
-                createDataFrame(mTxDataFrame, mRxDataFrame.pack.command, &servoParamsData, sizeof(ServoParamsData), RESP_CODE_SUCCESS);
+                create(mTxDataFrame, mRxDataFrame.pack.command, &servoParamsData, sizeof(ServoParamsData), RESP_CODE_SUCCESS);
             }
             break;
         }
@@ -250,16 +250,16 @@ void DeviceController::onDataReceived()
                     servoData.position[i] = mServo[i]->getCurrentPosition();
                 }
                 memcpy(mTxDataFrame.pack.data, &servoData, SPI_DATA_SIZE);
-                createDataFrame(mTxDataFrame, CMD_SERVO_DATA, RESP_CODE_SUCCESS);
+                create(mTxDataFrame, CMD_SERVO_DATA, RESP_CODE_SUCCESS);
             }
             else if (mTxDataFrame.pack.command != CMD_PING)
             {
-                createDataFrame(mTxDataFrame, CMD_PING, nullptr, 0, RESP_CODE_SUCCESS);
+                create(mTxDataFrame, CMD_PING, nullptr, 0, RESP_CODE_SUCCESS);
             }
         }
         else if (useDefaultReponse)
         {
-            createDataFrame(mTxDataFrame, mRxDataFrame.pack.command, isSuccess ? RESP_CODE_SUCCESS : RESP_CODE_ERROR);
+            create(mTxDataFrame, mRxDataFrame.pack.command, isSuccess ? RESP_CODE_SUCCESS : RESP_CODE_ERROR);
         }
     }
 
