@@ -67,35 +67,29 @@ void DeviceController::setState(DeviceState state)
         mState = state;
         if (mState != STATE_CONNECTED)
         {
-            createDataFrame(mTxDataFrame, CMD_DATA_ERROR, nullptr, 0);
+            createDataFrame(mTxDataFrame, CMD_DATA_ERROR, nullptr, 0, RESP_CODE_ERROR);
         }
         println("Status changed to %d", mState);
     }
 }
 
-void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command)
+void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, uint8_t responseCode)
 {
     dataFrame.pack.key1 = SPI_DATA_KEY1;
     dataFrame.pack.key2 = SPI_DATA_KEY2;
     dataFrame.pack.command = command;
+    dataFrame.pack.responseCode = responseCode;
     dataFrame.pack.checksum = calculateChecksum(dataFrame.frame, SPI_FRAME_SIZE - 1);
 }
 
-void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, const void *data, size_t length)
+void DeviceController::createDataFrame(DataFrame &dataFrame, uint8_t command, const void *data, size_t length, uint8_t responseCode)
 {
     memset(&dataFrame, 0, sizeof(DataFrame));
     if (data && length > 0 && length <= SPI_DATA_SIZE)
     {
         memcpy(dataFrame.pack.data, data, length);
     }
-    createDataFrame(dataFrame, command);
-}
-
-void DeviceController::createResponseDataFrame(DataFrame &dataFrame, uint8_t command, bool isSuccess)
-{
-    memset(&dataFrame, 0, sizeof(DataFrame));
-    dataFrame.pack.responseCode = isSuccess ? RESP_CODE_SUCCESS : RESP_CODE_ERROR;
-    createDataFrame(dataFrame, command);
+    createDataFrame(dataFrame, command, responseCode);
 }
 
 DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
@@ -192,6 +186,7 @@ void DeviceController::onDataReceived()
     {
         bool isSuccess = false;
         bool isHandled = true;
+        bool useDefaultReponse = true;
 
         switch (mRxDataFrame.pack.command)
         {
@@ -211,9 +206,26 @@ void DeviceController::onDataReceived()
         case CMD_SET_POSITION:
         {
             ServoReqData servoReqData;
-            memcpy(&servoReqData, mRxDataFrame.pack.data, sizeof(servoReqData));
+            memcpy(&servoReqData, mRxDataFrame.pack.data, sizeof(ServoReqData));
             println("servoReqData %d %.2f", servoReqData.index, servoReqData.position);
             isSuccess = requestPosition(servoReqData.index, servoReqData.position);
+            break;
+        }
+        case CMD_GET_SERVO_PARAMS:
+        {
+            ServoParamsData servoParamsData;
+            memcpy(&servoParamsData, mRxDataFrame.pack.data, sizeof(ServoParamsData));
+            uint8_t index = servoParamsData.index;
+            if (index >= 0 && index < SERVO_NUMS)
+            {
+                isSuccess = true;
+                useDefaultReponse = false;
+                memset(&servoParamsData, 0, sizeof(ServoParamsData));
+                servoParamsData.index = index;
+                servoParamsData.minPosition = mServo[index]->getMinPostion();
+                servoParamsData.maxPosition = mServo[index]->getMaxPostion();
+                createDataFrame(mTxDataFrame, mRxDataFrame.pack.command, &servoParamsData, sizeof(ServoParamsData), RESP_CODE_SUCCESS);
+            }
             break;
         }
         default:
@@ -223,11 +235,7 @@ void DeviceController::onDataReceived()
         }
         }
 
-        if (isHandled)
-        {
-            createResponseDataFrame(mTxDataFrame, mRxDataFrame.pack.command, isSuccess);
-        }
-        else
+        if (!isHandled)
         {
             if (mRxDataFrame.pack.command != CMD_PING)
             {
@@ -242,12 +250,16 @@ void DeviceController::onDataReceived()
                     servoData.position[i] = mServo[i]->getCurrentPosition();
                 }
                 memcpy(mTxDataFrame.pack.data, &servoData, SPI_DATA_SIZE);
-                createDataFrame(mTxDataFrame, CMD_SERVO_DATA);
+                createDataFrame(mTxDataFrame, CMD_SERVO_DATA, RESP_CODE_SUCCESS);
             }
             else if (mTxDataFrame.pack.command != CMD_PING)
             {
-                createDataFrame(mTxDataFrame, CMD_PING, nullptr, 0);
+                createDataFrame(mTxDataFrame, CMD_PING, nullptr, 0, RESP_CODE_SUCCESS);
             }
+        }
+        else if (useDefaultReponse)
+        {
+            createDataFrame(mTxDataFrame, mRxDataFrame.pack.command, isSuccess ? RESP_CODE_SUCCESS : RESP_CODE_ERROR);
         }
     }
 

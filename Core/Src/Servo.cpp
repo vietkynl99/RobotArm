@@ -173,6 +173,16 @@ bool Servo::requestPosition(double postion)
     return true;
 }
 
+double Servo::getMinPostion()
+{
+    return mMinPosition;
+}
+
+double Servo::getMaxPostion()
+{
+    return mMaxPosition;
+}
+
 // Unit: degree
 double Servo::getRequestedPosition()
 {

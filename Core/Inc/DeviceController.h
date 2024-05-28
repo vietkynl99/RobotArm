@@ -11,9 +11,16 @@ using namespace std;
 #define SERVO_NUMS          (6)
 
 #define SPI_DATA_SIZE       (24)
-#define SPI_FRAME_SIZE      (SPI_DATA_SIZE + 5)
+#define SPI_FRAME_SIZE      (SPI_DATA_SIZE + 6)
 #define SPI_DATA_KEY1 	    (0x99)
 #define SPI_DATA_KEY2       (0xD7)
+
+typedef struct
+{
+    uint8_t index;
+	float minPosition;
+	float maxPosition;
+} ServoParamsData;
 
 typedef struct SettingsData
 {
@@ -48,11 +55,8 @@ typedef struct
 	uint8_t key1;
 	uint8_t key2;
 	uint8_t command;
-    union
-    {
-        uint8_t data[SPI_DATA_SIZE];
-        uint8_t responseCode;
-    };
+    uint8_t data[SPI_DATA_SIZE];
+    uint8_t responseCode;
 	uint8_t checksum;
 } PackedData;
 
@@ -63,6 +67,7 @@ typedef union
 } DataFrame;
 
 static_assert(sizeof(float) == 4);
+static_assert(sizeof(ServoParamsData) <= SPI_DATA_SIZE);
 static_assert(sizeof(SettingsData) <= SPI_DATA_SIZE);
 static_assert(sizeof(ServoReqData) <= SPI_DATA_SIZE);
 static_assert(sizeof(ServoData) <= SPI_DATA_SIZE);
@@ -83,6 +88,7 @@ enum DataCommand
     CMD_START_ZERO_DETECTION,
     CMD_SET_POSITION,
     CMD_SYNC_SETTINGS,
+    CMD_GET_SERVO_PARAMS,
 
     CMD_DATA_ERROR = 200,
     CMD_SERVO_DATA
@@ -120,9 +126,8 @@ private:
     uint8_t calculateChecksum(const uint8_t *data, size_t length);
     bool verifyChecksum(const uint8_t *data, size_t length, uint8_t checksum);
     void setState(DeviceState state);
-    void createDataFrame(DataFrame &dataFrame, uint8_t command);
-    void createDataFrame(DataFrame &dataFrame, uint8_t command, const void *data, size_t length);
-    void createResponseDataFrame(DataFrame &dataFrame, uint8_t command, bool isSuccess);
+    void createDataFrame(DataFrame &dataFrame, uint8_t command, uint8_t responseCode);
+    void createDataFrame(DataFrame &dataFrame, uint8_t command, const void *data, size_t length, uint8_t responseCode);
     DeviceState verifyDataFrame(const DataFrame &frame);
     void handleData();
 };

@@ -46,6 +46,9 @@ public:
     void zeroDetect();
     bool requestPosition(double postion);
 
+    double getMinPostion();
+    double getMaxPostion();
+
     double getRequestedPosition();
     double getCurrentPosition();
     double getControlValue();
