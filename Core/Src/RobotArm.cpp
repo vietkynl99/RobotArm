@@ -21,10 +21,10 @@ void onUartDataReceived(char ch)
 
 void onSpiDataReceived()
 {
-    if (mDeviceController)
-    {
-        mDeviceController->onDataReceived();
-    }
+    // if (mDeviceController)
+    // {
+    //     mDeviceController->onDataReceived();
+    // }
 }
 
 void onSpiDataError()
@@ -178,6 +178,7 @@ void setup(TIM_HandleTypeDef *htim, SPI_HandleTypeDef *hspi)
 
     println("");
     println("*** Robot Arm ***");
+    println("Servo Test");
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
     CommandLine::install("plot", onCommandPlot, "plot [on/off]\t: turn on/off servo motor plotter");

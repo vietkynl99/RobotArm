@@ -71,6 +71,10 @@ void Servo::onZeroDectected()
 void Servo::setEnable(bool enabled)
 {
     mEnabled = enabled;
+    if (!mEnabled)
+    {
+        setOutput(0);
+    }
 }
 
 void Servo::tune(PidParams params)
@@ -145,18 +149,15 @@ double Servo::map(double input, double inMin, double inMax, double outMin, doubl
 
 void Servo::setOutput(int value)
 {
-    if (mEnabled)
+    if (value > 0)
     {
-        if (value > 0)
-        {
-            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, value);
-            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, 0);
-        }
-        else
-        {
-            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, 0);
-            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, -value);
-        }
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, value);
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, 0);
+    }
+    else
+    {
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, 0);
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, -value);
     }
 }
 
