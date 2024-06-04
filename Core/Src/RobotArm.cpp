@@ -41,7 +41,7 @@ void onGpioExt(uint16_t pin)
     {
         if (mServo)
         {
-            mServo->onEncoderEvent(!HAL_GPIO_ReadPin(M1_E2_GPIO_Port, M1_E2_Pin));
+            mServo->onEncoderEvent(HAL_GPIO_ReadPin(M1_E2_GPIO_Port, M1_E2_Pin));
         }
     }
 }
