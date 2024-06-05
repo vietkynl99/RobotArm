@@ -2,13 +2,11 @@
 #include <stdio.h>
 #include <cstdlib>
 
-#define ZERO_DETECTION_SPEED_PERCENT (0.25)
-
 Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp, double ki, double kd)
 {
-    mEnabled = true;
-    mIsZeroDetecting = false;
-    mZeroChecked = false;
+    mMode = SERVO_MODE_DISABLED;
+    mZeroDetectionState = ZERO_DETECTION_NONE;
+    mSpeed = 0;
 #if SERVO_ENABLE_ERR_DETECTION
     mTick = 0;
 #endif
@@ -29,7 +27,7 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
     reset();
 
     HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh1);
-	HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh2);
+    HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh2);
     setOutput(0);
 }
 
@@ -61,18 +59,21 @@ void Servo::onEncoderEvent(bool direction)
 
 void Servo::onZeroDectected()
 {
-    if (mIsZeroDetecting)
+    if (mZeroDetectionState == ZERO_DETECTION_RUNNING)
     {
         println("Stop zero detection");
-        mIsZeroDetecting = false;
-        mZeroChecked = true;
+        mZeroDetectionState = ZERO_DETECTION_FINISHED;
         reset(mZeroPosition);
     }
 }
 
-void Servo::setEnable(bool enabled)
+void Servo::setMode(int mode)
 {
-    mEnabled = enabled;
+    mMode = mode;
+    if (!mMode)
+    {
+        setOutput(0);
+    }
 }
 
 void Servo::tune(PidParams params)
@@ -85,48 +86,55 @@ void Servo::tune(PidParams params)
 
 void Servo::run()
 {
-    if (mEnabled && !mIsZeroDetecting)
+    if (!mMode)
     {
-        mError = mSetpoint - getCurrentPosition();
-#if SERVO_ENABLE_ERR_DETECTION
-        mTick = (mTick + 1) % 100;
-        if (!mTick)
-        {
-            if (abs(mError) > abs(mPrevError) && abs(mError) > 10)
-            {
-                if (mInvalidCount < 0xFF)
-                {
-                    mInvalidCount++;
-                }
-                if (mInvalidCount > 3)
-                {
-                    println("Servo direction error");
-                    setEnable(false);
-                    mPrevError = mError;
-                    return;
-                }
-            }
-            mPrevError = mError;
-        }
-#endif
-        mPidController->run();
-
-        double fixedOutput = mOutput;
-        if (fixedOutput > -SERVO_FIXED_PWN_IN && fixedOutput < SERVO_FIXED_PWN_IN)
-        {
-            fixedOutput = map(fixedOutput, -SERVO_FIXED_PWN_IN, SERVO_FIXED_PWN_IN, -SERVO_FIXED_PWN_OUT, SERVO_FIXED_PWN_OUT);
-        }
-        else if (fixedOutput > 0)
-        {
-            fixedOutput = map(fixedOutput, SERVO_FIXED_PWN_IN, SERVO_PWM_RESOLUTION, SERVO_FIXED_PWN_OUT, SERVO_PWM_RESOLUTION);
-        }
-        else
-        {
-            fixedOutput = map(fixedOutput, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_IN, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_OUT);
-        }
-
-        setOutput(fixedOutput);
+        return;
     }
+
+    if (mMode == SERVO_MODE_SPEED)
+    {
+        mSetpoint = mSpeed * (HAL_GetTick() - mOriginTime);
+    }
+    mError = mSetpoint - getCurrentPosition();
+
+#if SERVO_ENABLE_ERR_DETECTION
+    mTick = (mTick + 1) % 100;
+    if (!mTick)
+    {
+        if (abs(mError) > abs(mPrevError) && abs(mError) > 10)
+        {
+            if (mInvalidCount < 0xFF)
+            {
+                mInvalidCount++;
+            }
+            if (mInvalidCount > 3)
+            {
+                println("Servo direction error");
+                setMode(false);
+                mPrevError = mError;
+                return;
+            }
+        }
+        mPrevError = mError;
+    }
+#endif
+    mPidController->run();
+
+    double fixedOutput = mOutput;
+    if (fixedOutput > -SERVO_FIXED_PWN_IN && fixedOutput < SERVO_FIXED_PWN_IN)
+    {
+        fixedOutput = map(fixedOutput, -SERVO_FIXED_PWN_IN, SERVO_FIXED_PWN_IN, -SERVO_FIXED_PWN_OUT, SERVO_FIXED_PWN_OUT);
+    }
+    else if (fixedOutput > 0)
+    {
+        fixedOutput = map(fixedOutput, SERVO_FIXED_PWN_IN, SERVO_PWM_RESOLUTION, SERVO_FIXED_PWN_OUT, SERVO_PWM_RESOLUTION);
+    }
+    else
+    {
+        fixedOutput = map(fixedOutput, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_IN, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_OUT);
+    }
+
+    setOutput(fixedOutput);
 }
 
 void Servo::reset(double position)
@@ -146,12 +154,12 @@ void Servo::reset(double position)
 
 void Servo::zeroDetect()
 {
-    if (mEnabled && !mIsZeroDetecting)
+    if (mZeroDetectionState != ZERO_DETECTION_RUNNING)
     {
         println("Zero dectect is running...");
-        mIsZeroDetecting = true;
-        mZeroChecked = false;
-        setOutput(SERVO_PWM_RESOLUTION * ZERO_DETECTION_SPEED_PERCENT);
+        mZeroDetectionState = ZERO_DETECTION_RUNNING;
+        setMode(SERVO_MODE_SPEED);
+        requestSpeed(SERVO_ZERO_DETECTION_SPEED);
     }
 }
 
@@ -171,25 +179,27 @@ double Servo::map(double input, double inMin, double inMax, double outMin, doubl
 
 void Servo::setOutput(int value)
 {
-    if (mEnabled)
+    if (value > 0)
     {
-        if (value > 0)
-        {
-            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, value);
-            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, 0);
-        }
-        else
-        {
-            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, 0);
-            __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, -value);
-        }
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, value);
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, 0);
+    }
+    else
+    {
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, 0);
+        __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh2, -value);
     }
 }
 
 // Unit: degree
 bool Servo::requestPosition(double postion)
 {
-    if (!mZeroChecked)
+    if (mMode != SERVO_MODE_POSITION)
+    {
+        println("Is not position mode");
+        return false;
+    }
+    if (mZeroDetectionState != ZERO_DETECTION_FINISHED)
     {
         println("Need to check zero position");
         return false;
@@ -200,6 +210,20 @@ bool Servo::requestPosition(double postion)
         return false;
     }
     mSetpoint = postion;
+    return true;
+}
+
+// Unit: rpm
+bool Servo::requestSpeed(double rpm)
+{
+    if (mMode != SERVO_MODE_SPEED)
+    {
+        println("Is not speed mode");
+        return false;
+    }
+    // rpm to deg/ms
+    mSpeed = rpm * 0.006;
+    mOriginTime = HAL_GetTick();
     return true;
 }
 

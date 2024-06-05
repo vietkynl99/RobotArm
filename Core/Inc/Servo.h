@@ -10,6 +10,21 @@
 #define SERVO_FIXED_PWN_OUT         (170)   // the minimum value of pwm that the motor can run
 #define SERVO_FIXED_PWN_IN          (0.3)   // the minimum value of pwm that the motor can run
 #define SERVO_ENABLE_ERR_DETECTION  (1)     // enable the error detection
+#define SERVO_ZERO_DETECTION_SPEED  (3)    // [rpm] enable the error detection
+
+enum ServoMode
+{
+    SERVO_MODE_DISABLED,
+    SERVO_MODE_SPEED,
+    SERVO_MODE_POSITION
+};
+
+enum ZeroDetectionState
+{
+    ZERO_DETECTION_NONE,
+    ZERO_DETECTION_RUNNING,
+    ZERO_DETECTION_FINISHED
+};
 
 class Servo
 {
@@ -27,14 +42,15 @@ private:
     double mMinPosition;
     double mMaxPosition;
     double mZeroPosition;
+    double mSpeed;
 
     PidController *mPidController;
     TIM_HandleTypeDef *mOutputTimer;
     uint16_t mOutputTimerCh1;
     uint16_t mOutputTimerCh2;
-    bool mEnabled;
-    bool mZeroChecked;
-    bool mIsZeroDetecting;
+    int mMode;
+    int8_t mZeroDetectionState;
+    uint32_t mOriginTime;
 #if SERVO_ENABLE_ERR_DETECTION
     uint8_t mTick;
     uint8_t mInvalidCount;
@@ -47,12 +63,13 @@ public:
     void onEncoderEvent(bool direction);
     void onZeroDectected();
 
-    void setEnable(bool enabled);
+    void setMode(int mode);
     void tune(PidParams params);
     void run();
     void reset(double position = 0);
     void zeroDetect();
     bool requestPosition(double postion);
+    bool requestSpeed(double speed);
 
     double getMinPostion();
     double getMaxPostion();

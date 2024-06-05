@@ -298,6 +298,18 @@ void DeviceController::run()
         mLastTime = HAL_GetTick() + CONNECTION_TIMEOUT;
         setState(STATE_DISCONNECTED);
     }
+
+    static uint32_t timeTick = 0;
+    static double position = 0;
+    if (HAL_GetTick() > timeTick && position != mServo[0]->getCurrentPosition())
+    {
+        timeTick = HAL_GetTick() + 10;
+        position = mServo[0]->getCurrentPosition();
+        println("%.2f %.2f %.2f",
+                   mServo[0]->getRequestedPosition(),
+                   mServo[0]->getCurrentPosition(),
+                   100 * mServo[0]->getControlValue() / SERVO_PWM_RESOLUTION);
+    }
 }
 
 bool DeviceController::startZeroDetection(int index)
