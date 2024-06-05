@@ -1,5 +1,6 @@
 #include "Servo.h"
 #include <stdio.h>
+#include <cstdlib>
 
 #define ZERO_DETECTION_SPEED_PERCENT (0.25)
 
@@ -8,6 +9,9 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
     mEnabled = true;
     mIsZeroDetecting = false;
     mZeroChecked = false;
+#if SERVO_ENABLE_ERR_DETECTION
+    mTick = 0;
+#endif
     mMinPosition = minPosition;
     mMaxPosition = maxPosition;
     mZeroPosition = zeroPosition;
@@ -84,6 +88,27 @@ void Servo::run()
     if (mEnabled && !mIsZeroDetecting)
     {
         mError = mSetpoint - getCurrentPosition();
+#if SERVO_ENABLE_ERR_DETECTION
+        mTick = (mTick + 1) % 100;
+        if (!mTick)
+        {
+            if (abs(mError) > abs(mPrevError) && abs(mError) > 10)
+            {
+                if (mInvalidCount < 0xFF)
+                {
+                    mInvalidCount++;
+                }
+                if (mInvalidCount > 3)
+                {
+                    println("Servo direction error");
+                    setEnable(false);
+                    mPrevError = mError;
+                    return;
+                }
+            }
+            mPrevError = mError;
+        }
+#endif
         mPidController->run();
 
         double fixedOutput = mOutput;
@@ -110,6 +135,11 @@ void Servo::reset(double position)
     mSetpoint = position;
     mOutput = 0;
     mError = 0;
+
+#if SERVO_ENABLE_ERR_DETECTION
+    mPrevError = 0;
+    mInvalidCount = 0;
+#endif
 
     mPidController->reset();
 }

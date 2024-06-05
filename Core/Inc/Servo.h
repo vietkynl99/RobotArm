@@ -8,7 +8,8 @@
 #define SERVO_ENCODER_RESOLUTION    (2)     // pulse per revolution
 #define SERVO_PWM_RESOLUTION        (999)   // must matched with timer pwm generator
 #define SERVO_FIXED_PWN_OUT         (170)   // the minimum value of pwm that the motor can run
-#define SERVO_FIXED_PWN_IN          (0.3)     // the minimum value of pwm that the motor can run
+#define SERVO_FIXED_PWN_IN          (0.3)   // the minimum value of pwm that the motor can run
+#define SERVO_ENABLE_ERR_DETECTION  (1)     // enable the error detection
 
 class Servo
 {
@@ -16,6 +17,9 @@ private:
     double mSetpoint;
     double mOutput;
     double mError;
+#if SERVO_ENABLE_ERR_DETECTION
+    double mPrevError;
+#endif
 
     int64_t mEncoderPulse;
     double mEncoderResolution;
@@ -31,6 +35,10 @@ private:
     bool mEnabled;
     bool mZeroChecked;
     bool mIsZeroDetecting;
+#if SERVO_ENABLE_ERR_DETECTION
+    uint8_t mTick;
+    uint8_t mInvalidCount;
+#endif
 
 public:
     Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp, double ki, double kd);
