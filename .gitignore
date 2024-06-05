@@ -51,3 +51,6 @@
 
 # Tmp files
 .mxproject
+
+# Etc
+.vscode/
