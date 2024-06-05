@@ -15,6 +15,9 @@ using namespace std;
 #define SPI_DATA_KEY1 	    (0x99)
 #define SPI_DATA_KEY2       (0xD7)
 
+// For testing
+#define SERVO_TEST_INDEX    (0)
+
 typedef struct
 {
     uint8_t index;

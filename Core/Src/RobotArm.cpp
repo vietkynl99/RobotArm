@@ -69,7 +69,7 @@ bool onCommandPosition(string params)
 {
     if (params.empty())
     {
-        println("Current position: %.6f", mController->getCurrentPosition(0));
+        println("Current position: %.6f", mController->getCurrentPosition(SERVO_TEST_INDEX));
         return true;
     }
     else
@@ -77,7 +77,7 @@ bool onCommandPosition(string params)
         float setpoint = 0;
         if (sscanf(params.c_str(), "%f", &setpoint) == 1)
         {
-            mController->requestPosition(0, setpoint);
+            mController->requestPosition(SERVO_TEST_INDEX, setpoint);
             return true;
         }
     }
@@ -90,7 +90,7 @@ bool onCommandZeroDetect(string params)
     {
         return false;
     }
-    mController->startZeroDetection(0);
+    mController->startZeroDetection(SERVO_TEST_INDEX);
     return true;
 }
 

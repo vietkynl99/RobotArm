@@ -5,6 +5,7 @@
 #define CONNECTION_TIMEOUT 1000
 
 #define DEBUG_FRAME_DATA (0)
+#define DEBUG_PID_VALUE (0)
 
 DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
@@ -299,17 +300,19 @@ void DeviceController::run()
         setState(STATE_DISCONNECTED);
     }
 
+#if DEBUG_PID_VALUE
     static uint32_t timeTick = 0;
     static double position = 0;
-    if (HAL_GetTick() > timeTick && position != mServo[0]->getCurrentPosition())
+    if (HAL_GetTick() > timeTick && position != mServo[SERVO_TEST_INDEX]->getCurrentPosition())
     {
         timeTick = HAL_GetTick() + 10;
-        position = mServo[0]->getCurrentPosition();
+        position = mServo[SERVO_TEST_INDEX]->getCurrentPosition();
         println("%.2f %.2f %.2f",
-                   mServo[0]->getRequestedPosition(),
-                   mServo[0]->getCurrentPosition(),
-                   100 * mServo[0]->getControlValue() / SERVO_PWM_RESOLUTION);
+                   mServo[SERVO_TEST_INDEX]->getRequestedPosition(),
+                   mServo[SERVO_TEST_INDEX]->getCurrentPosition(),
+                   100 * mServo[SERVO_TEST_INDEX]->getControlValue() / SERVO_PWM_RESOLUTION);
     }
+#endif
 }
 
 bool DeviceController::startZeroDetection(int index)
