@@ -64,6 +64,7 @@ void Servo::onZeroDectected()
         println("Stop zero detection");
         mZeroDetectionState = ZERO_DETECTION_FINISHED;
         reset(mZeroPosition);
+        setMode(SERVO_MODE_POSITION);
     }
 }
 
