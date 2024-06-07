@@ -10,7 +10,7 @@
 #define SERVO_FIXED_PWN_OUT         (170)   // the minimum value of pwm that the motor can run
 #define SERVO_FIXED_PWN_IN          (0.3)   // the minimum value of pwm that the motor can run
 #define SERVO_ENABLE_ERR_DETECTION  (1)     // enable the error detection
-#define SERVO_ZERO_DETECTION_SPEED  (3)    // [rpm] enable the error detection
+#define SERVO_ZERO_DETECTION_SPEED  (10)    // [rpm] enable the error detection
 
 enum ServoMode
 {

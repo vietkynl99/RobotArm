@@ -1,6 +1,6 @@
 #include "PidController.h"
 
-#define PID_KD_ENABLE 0
+#define PID_KD_ENABLE 1
 
 PidController::PidController(double *inputPtr, double *outputPtr, double sampleTime, PidParams params, double lowLimit, double highLimit)
 {

@@ -9,7 +9,7 @@
 
 DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 5, 10);
     mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
     mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
     mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
