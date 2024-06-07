@@ -64,6 +64,10 @@ public:
     void onZeroDectected();
 
     void setMode(int mode);
+    int getMode();
+
+    int getZeroDetectionState();
+
     void tune(PidParams params);
     void run();
     void reset(double position = 0);

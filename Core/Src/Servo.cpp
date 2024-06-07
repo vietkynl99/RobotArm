@@ -76,6 +76,16 @@ void Servo::setMode(int mode)
     }
 }
 
+int Servo::getMode()
+{
+    return mMode;
+}
+
+int Servo::getZeroDetectionState()
+{
+    return mZeroDetectionState;
+}
+
 void Servo::tune(PidParams params)
 {
     params.kp /= mResolution;

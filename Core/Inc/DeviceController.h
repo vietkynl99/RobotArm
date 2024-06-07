@@ -28,10 +28,12 @@ typedef struct
 typedef struct SettingsData
 {
     bool autoSend;
+    uint8_t focusedIndex;
 
     SettingsData()
     {
         autoSend = false;
+        focusedIndex = 0;
     }
 } SettingsData;
 
@@ -43,8 +45,13 @@ typedef struct
 
 typedef struct
 {
-	float position[SERVO_NUMS];
-} ServoData;
+    int index;
+    uint8_t mode;
+    uint8_t zeroDetectionState;
+    float requestedPosition;
+	float currentPosition;
+    float controlValue;
+} ServoRespData;
 
 enum eResponsecode 
 {
@@ -73,7 +80,7 @@ static_assert(sizeof(float) == 4);
 static_assert(sizeof(ServoParamsData) <= SPI_DATA_SIZE);
 static_assert(sizeof(SettingsData) <= SPI_DATA_SIZE);
 static_assert(sizeof(ServoReqData) <= SPI_DATA_SIZE);
-static_assert(sizeof(ServoData) <= SPI_DATA_SIZE);
+static_assert(sizeof(ServoRespData) <= SPI_DATA_SIZE);
 static_assert(sizeof(PackedData) == SPI_FRAME_SIZE);
 static_assert(sizeof(DataFrame) == SPI_FRAME_SIZE);
 

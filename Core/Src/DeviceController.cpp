@@ -245,12 +245,14 @@ void DeviceController::onDataReceived()
 
             if (mSettingsData.autoSend)
             {
-                ServoData servoData;
-                for (int i = 0; i < SERVO_NUMS; i++)
-                {
-                    servoData.position[i] = mServo[i]->getCurrentPosition();
-                }
-                memcpy(mTxDataFrame.pack.data, &servoData, SPI_DATA_SIZE);
+                ServoRespData data;
+                data.index = mSettingsData.focusedIndex;
+                data.mode = mServo[data.index]->getMode();
+                data.zeroDetectionState = mServo[data.index]->getZeroDetectionState();
+                data.requestedPosition = mServo[data.index]->getRequestedPosition();
+                data.currentPosition = mServo[data.index]->getCurrentPosition();
+                data.controlValue = mServo[data.index]->getControlValue();
+                memcpy(mTxDataFrame.pack.data, &data, SPI_DATA_SIZE);
                 create(mTxDataFrame, CMD_SERVO_DATA, RESP_CODE_SUCCESS);
             }
             else if (mTxDataFrame.pack.command != CMD_PING)
