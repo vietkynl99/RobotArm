@@ -46,8 +46,7 @@ typedef struct
 typedef struct
 {
     int index;
-    uint8_t mode;
-    uint8_t zeroDetectionState;
+    uint8_t state;
     float requestedPosition;
 	float currentPosition;
     float controlValue;

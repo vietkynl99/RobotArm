@@ -12,18 +12,12 @@
 #define SERVO_ENABLE_ERR_DETECTION  (1)     // enable the error detection
 #define SERVO_ZERO_DETECTION_SPEED  (10)    // [rpm] enable the error detection
 
-enum ServoMode
+enum ServoState
 {
-    SERVO_MODE_DISABLED,
-    SERVO_MODE_SPEED,
-    SERVO_MODE_POSITION
-};
-
-enum ZeroDetectionState
-{
-    ZERO_DETECTION_NONE,
-    ZERO_DETECTION_RUNNING,
-    ZERO_DETECTION_FINISHED
+    SERVO_STATE_ERROR,
+    SERVO_STATE_DISABLED,
+    SERVO_STATE_ZERO_DETECTION,
+    SERVO_STATE_POSITION
 };
 
 class Servo
@@ -48,8 +42,7 @@ private:
     TIM_HandleTypeDef *mOutputTimer;
     uint16_t mOutputTimerCh1;
     uint16_t mOutputTimerCh2;
-    int mMode;
-    int8_t mZeroDetectionState;
+    ServoState mState;
     uint32_t mOriginTime;
 #if SERVO_ENABLE_ERR_DETECTION
     uint8_t mTick;
@@ -63,15 +56,13 @@ public:
     void onEncoderEvent(bool direction);
     void onZeroDectected();
 
-    void setMode(int mode);
-    int getMode();
-
-    int getZeroDetectionState();
+    void setState(ServoState state);
+    int getState();
 
     void tune(PidParams params);
     void run();
     void reset(double position = 0);
-    void zeroDetect();
+    bool zeroDetect();
     bool requestPosition(double postion);
     bool requestSpeed(double speed);
 

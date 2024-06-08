@@ -66,11 +66,19 @@ void DeviceController::setState(DeviceState state)
     if (mState != state)
     {
         mState = state;
+        println("State changed to %d", mState);
         if (mState != STATE_CONNECTED)
         {
             create(mTxDataFrame, CMD_DATA_ERROR, nullptr, 0, RESP_CODE_ERROR);
+            for (int i = 0; i < SERVO_NUMS; i++)
+            {
+                if (mServo[i]->getState() != SERVO_STATE_ERROR && mServo[i]->getState() != SERVO_STATE_DISABLED)
+                {
+                    println("Disable servo %d", i);
+                    mServo[i]->setState(SERVO_STATE_DISABLED);
+                }
+            }
         }
-        println("Status changed to %d", mState);
     }
 }
 
@@ -247,8 +255,7 @@ void DeviceController::onDataReceived()
             {
                 ServoRespData data;
                 data.index = mSettingsData.focusedIndex;
-                data.mode = mServo[data.index]->getMode();
-                data.zeroDetectionState = mServo[data.index]->getZeroDetectionState();
+                data.state = mServo[data.index]->getState();
                 data.requestedPosition = mServo[data.index]->getRequestedPosition();
                 data.currentPosition = mServo[data.index]->getCurrentPosition();
                 data.controlValue = mServo[data.index]->getControlValue();
@@ -310,9 +317,9 @@ void DeviceController::run()
         timeTick = HAL_GetTick() + 10;
         position = mServo[SERVO_TEST_INDEX]->getCurrentPosition();
         println("%.2f %.2f %.2f",
-                   mServo[SERVO_TEST_INDEX]->getRequestedPosition(),
-                   mServo[SERVO_TEST_INDEX]->getCurrentPosition(),
-                   100 * mServo[SERVO_TEST_INDEX]->getControlValue() / SERVO_PWM_RESOLUTION);
+                mServo[SERVO_TEST_INDEX]->getRequestedPosition(),
+                mServo[SERVO_TEST_INDEX]->getCurrentPosition(),
+                100 * mServo[SERVO_TEST_INDEX]->getControlValue() / SERVO_PWM_RESOLUTION);
     }
 #endif
 }
@@ -324,9 +331,15 @@ bool DeviceController::startZeroDetection(int index)
         println("Invalid servo index %d", index);
         return false;
     }
-    println("Servo %d start zero detection", index);
-    mServo[index]->zeroDetect();
-    return true;
+    if (mServo[index]->zeroDetect())
+    {
+        println("Servo %d start zero detection", index);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool DeviceController::requestPosition(int index, float position)
