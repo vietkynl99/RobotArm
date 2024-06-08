@@ -39,8 +39,8 @@ typedef struct SettingsData
 
 typedef struct
 {
-	float position;
     uint8_t index;
+	float position;
 } ServoReqData;
 
 typedef struct
@@ -94,8 +94,10 @@ enum DeviceState
 enum DataCommand
 {
     CMD_PING = 1,
+    CMD_ESTOP,
+    CMD_RESET,
     CMD_START_ZERO_DETECTION,
-    CMD_SET_POSITION,
+    CMD_CHANGE_POSITION,
     CMD_SYNC_SETTINGS,
     CMD_GET_SERVO_PARAMS,
 
@@ -131,6 +133,7 @@ public:
     float getCurrentPosition(int index);
     
 private:
+    void disableServos();
     string getString(const DataFrame &frame);
     uint8_t calculateChecksum(const uint8_t *data, size_t length);
     bool verifyChecksum(const uint8_t *data, size_t length, uint8_t checksum);

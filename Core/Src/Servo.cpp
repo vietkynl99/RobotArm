@@ -159,6 +159,11 @@ void Servo::reset(double position)
 #endif
 
     mPidController->reset();
+
+    if (mState != SERVO_STATE_POSITION)
+    {
+        setState(SERVO_STATE_DISABLED);
+    }
 }
 
 bool Servo::zeroDetect()

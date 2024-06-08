@@ -26,6 +26,18 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.frame, mRxDataFrame.frame, SPI_FRAME_SIZE);
 }
 
+void DeviceController::disableServos()
+{
+    for (int i = 0; i < SERVO_NUMS; i++)
+    {
+        if (mServo[i]->getState() != SERVO_STATE_ERROR && mServo[i]->getState() != SERVO_STATE_DISABLED)
+        {
+            println("Disable servo %d", i);
+            mServo[i]->setState(SERVO_STATE_DISABLED);
+        }
+    }
+}
+
 string DeviceController::getString(const DataFrame &frame)
 {
     string str = "";
@@ -70,14 +82,7 @@ void DeviceController::setState(DeviceState state)
         if (mState != STATE_CONNECTED)
         {
             create(mTxDataFrame, CMD_DATA_ERROR, nullptr, 0, RESP_CODE_ERROR);
-            for (int i = 0; i < SERVO_NUMS; i++)
-            {
-                if (mServo[i]->getState() != SERVO_STATE_ERROR && mServo[i]->getState() != SERVO_STATE_DISABLED)
-                {
-                    println("Disable servo %d", i);
-                    mServo[i]->setState(SERVO_STATE_DISABLED);
-                }
-            }
+            disableServos();
         }
     }
 }
@@ -212,12 +217,23 @@ void DeviceController::onDataReceived()
             isSuccess = startZeroDetection(index);
             break;
         }
-        case CMD_SET_POSITION:
+        case CMD_CHANGE_POSITION:
         {
-            ServoReqData servoReqData;
-            memcpy(&servoReqData, mRxDataFrame.pack.data, sizeof(ServoReqData));
-            println("servoReqData %d %.2f", servoReqData.index, servoReqData.position);
-            isSuccess = requestPosition(servoReqData.index, servoReqData.position);
+            ServoReqData data;
+            memcpy(&data, mRxDataFrame.pack.data, sizeof(ServoReqData));
+            isSuccess = requestPosition(data.index, data.position);
+            break;
+        }
+        case CMD_RESET:
+        {
+            ServoReqData data;
+            memcpy(&data, mRxDataFrame.pack.data, sizeof(ServoReqData));
+            if (data.index >= 0 && data.index < SERVO_NUMS)
+            {
+                println("Reset servo %d", data.index);
+                mServo[data.index]->reset();
+                isSuccess = true;
+            }
             break;
         }
         case CMD_GET_SERVO_PARAMS:
@@ -235,6 +251,13 @@ void DeviceController::onDataReceived()
                 servoParamsData.maxPosition = mServo[index]->getMaxPostion();
                 create(mTxDataFrame, mRxDataFrame.pack.command, &servoParamsData, sizeof(ServoParamsData), RESP_CODE_SUCCESS);
             }
+            break;
+        }
+        case CMD_ESTOP:
+        {
+            println("E Stop");
+            disableServos();
+            isSuccess = true;
             break;
         }
         default:
