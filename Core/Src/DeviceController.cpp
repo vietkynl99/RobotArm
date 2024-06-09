@@ -222,7 +222,7 @@ void DeviceController::onDataReceived()
         case CMD_SYNC_SETTINGS:
         {
             memcpy(&mSettingsData, mRxDataFrame.pack.data, sizeof(SettingsData));
-            println("autoSend: %d", mSettingsData.autoSend);
+            println("Settings are synchronized");
             isSuccess = true;
             break;
         }
