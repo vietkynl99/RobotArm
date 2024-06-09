@@ -26,6 +26,21 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.frame, mRxDataFrame.frame, SPI_FRAME_SIZE);
 }
 
+const char *DeviceController::deviceStateToString(int deviceState)
+{
+    switch (deviceState)
+    {
+    case STATE_DISCONNECTED:
+        return "Disconnected";
+    case STATE_DATA_ERROR:
+        return "Data error";
+    case STATE_CONNECTED:
+        return "Connected";
+    default:
+        return "Unknown";
+    }
+}
+
 void DeviceController::disableServos()
 {
     for (int i = 0; i < SERVO_NUMS; i++)
@@ -78,7 +93,7 @@ void DeviceController::setState(DeviceState state)
     if (mState != state)
     {
         mState = state;
-        println("State changed to %d", mState);
+        println("State changed to %s", deviceStateToString(mState));
         if (mState != STATE_CONNECTED)
         {
             create(mTxDataFrame, CMD_DATA_ERROR, nullptr, 0, RESP_CODE_ERROR);

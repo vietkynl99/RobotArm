@@ -87,7 +87,6 @@ enum DeviceState
 {
     STATE_DISCONNECTED,
     STATE_DATA_ERROR,
-    STATE_UNKNOWN_CMD_ERROR,
     STATE_CONNECTED,
 };
 
@@ -133,6 +132,7 @@ public:
     float getCurrentPosition(int index);
     
 private:
+    const char *deviceStateToString(int deviceState);
     void disableServos();
     string getString(const DataFrame &frame);
     uint8_t calculateChecksum(const uint8_t *data, size_t length);
