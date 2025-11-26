@@ -135,9 +135,12 @@ public:
     bool requestPosition(int index, float position);
     float getCurrentPosition(int index);
     
+    void forceOutput(int index, int pwmValue);
+    void disableServo(int index);
+    void disableServos();
+
 private:
     const char *deviceStateToString(int deviceState);
-    void disableServos();
     string getString(const DataFrame &frame);
     uint8_t calculateChecksum(const uint8_t *data, size_t length);
     bool verifyChecksum(const uint8_t *data, size_t length, uint8_t checksum);

@@ -84,8 +84,9 @@ public:
     double getCurrentPosition();
     double getControlValue();
 
+    void setOutput(int value);
+
 private:
     double map(double input, double inMin, double inMax, double outMin, double outMax);
-    void setOutput(int value);
 };
 #endif /* INC_SERVO_H_ */

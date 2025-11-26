@@ -41,15 +41,39 @@ const char *DeviceController::deviceStateToString(int deviceState)
     }
 }
 
+void DeviceController::forceOutput(int index, int pwmValue)
+{
+    if (index >= 0 && index < SERVO_NUMS)
+    {
+        if (mServo[index]->getState() != SERVO_STATE_DISABLED)
+        {
+            println("Servo %d is not disabled");
+        }
+        else
+        {
+            println("forceOutput servo %d: %d", pwmValue);
+            mServo[index]->setOutput(SERVO_STATE_DISABLED);
+        }
+    }
+}
+
+void DeviceController::disableServo(int index)
+{
+    if (index >= 0 && index < SERVO_NUMS)
+    {
+        if (mServo[index]->getState() != SERVO_STATE_ERROR && mServo[index]->getState() != SERVO_STATE_DISABLED)
+        {
+            println("Disable servo %d", index);
+            mServo[index]->setState(SERVO_STATE_DISABLED);
+        }
+    }
+}
+
 void DeviceController::disableServos()
 {
     for (int i = 0; i < SERVO_NUMS; i++)
     {
-        if (mServo[i]->getState() != SERVO_STATE_ERROR && mServo[i]->getState() != SERVO_STATE_DISABLED)
-        {
-            println("Disable servo %d", i);
-            mServo[i]->setState(SERVO_STATE_DISABLED);
-        }
+        disableServo(i);
     }
 }
 
@@ -362,30 +386,31 @@ void DeviceController::run()
 
 void DeviceController::tune(int index, PidParams params)
 {
-    if (index < 0 || index >= SERVO_NUMS)
+    if (index >= 0 && index < SERVO_NUMS)
     {
-        println("Invalid servo index %d", index);
+        mServo[index]->tune(params);
     }
-    mServo[index]->tune(params);
 }
 
 void DeviceController::debugMotor(int index)
 {
-    if (index < 0 || index >= SERVO_NUMS)
+    if (index >= 0 && index < SERVO_NUMS)
     {
-        println("Invalid servo index %d", index);
+        println("Servo %d: state %d, request pos %.2f, current pos %.2f",
+                index,
+                mServo[index]->getState(),
+                mServo[index]->getRequestedPosition(),
+                mServo[index]->getCurrentPosition());
     }
-    println("Servo %d: request pos %.2f, current pos %.2f", index, mServo[index]->getRequestedPosition(), mServo[index]->getCurrentPosition());
 }
 
 void DeviceController::startMonitor(int index)
 {
-    if (index < 0 || index >= SERVO_NUMS)
+    if (index >= 0 && index < SERVO_NUMS)
     {
-        println("Invalid servo index %d", index);
+        println("Start debugging %d", index);
+        mMonitorIndex = index;
     }
-    println("Start debugging %d", index);
-    mMonitorIndex = index;
 }
 
 void DeviceController::stopMonitor()
@@ -406,12 +431,7 @@ int DeviceController::getMonitorIndex()
 
 bool DeviceController::startZeroDetection(int index)
 {
-    if (index < 0 || index >= SERVO_NUMS)
-    {
-        println("Invalid servo index %d", index);
-        return false;
-    }
-    if (mServo[index]->zeroDetect())
+    if (index >= 0 && index < SERVO_NUMS && mServo[index]->zeroDetect())
     {
         println("Servo %d start zero detection", index);
         return true;
@@ -424,20 +444,18 @@ bool DeviceController::startZeroDetection(int index)
 
 bool DeviceController::requestPosition(int index, float position)
 {
-    if (index < 0 || index >= SERVO_NUMS)
+    if (index >= 0 && index < SERVO_NUMS)
     {
-        println("Invalid servo index %d", index);
-        return false;
+        return mServo[index]->requestPosition(position);
     }
-    return mServo[index]->requestPosition(position);
+    return false;
 }
 
 float DeviceController::getCurrentPosition(int index)
 {
-    if (index < 0 || index >= SERVO_NUMS)
+    if (index >= 0 && index < SERVO_NUMS)
     {
-        println("Invalid servo index %d", index);
-        return 0;
+        return mServo[index]->getCurrentPosition();
     }
-    return mServo[index]->getCurrentPosition();
+    return 0;
 }
