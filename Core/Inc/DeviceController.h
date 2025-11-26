@@ -15,9 +15,6 @@ using namespace std;
 #define SPI_DATA_KEY1 	    (0x99)
 #define SPI_DATA_KEY2       (0xD7)
 
-// For testing
-#define SERVO_TEST_INDEX    (0)
-
 typedef struct
 {
     uint8_t index;
@@ -115,6 +112,7 @@ private:
     SettingsData mSettingsData;
 
     Servo *mServo[SERVO_NUMS];
+    int mMonitorIndex;
 
 public:
     DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi);
@@ -127,6 +125,12 @@ public:
     void onDataError();
     void run();
 
+    void tune(int index, PidParams params);
+    void debugMotor(int index);
+    void startMonitor(int index);
+    void stopMonitor();
+    bool isMonitoring();
+    int getMonitorIndex();
     bool startZeroDetection(int index);
     bool requestPosition(int index, float position);
     float getCurrentPosition(int index);

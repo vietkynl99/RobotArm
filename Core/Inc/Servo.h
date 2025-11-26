@@ -5,7 +5,6 @@
 #include "PidController.h"
 
 #define SERVO_SAMPLE_TIME_S         (1E-3)  // must matched with timer interrupt
-#define SERVO_ENCODER_RESOLUTION    (2)     // pulse per revolution
 #define SERVO_PWM_RESOLUTION        (999)   // must matched with timer pwm generator
 #define SERVO_FIXED_PWN_OUT         (170)   // the minimum value of pwm that the motor can run
 #define SERVO_FIXED_PWN_IN          (0.3)   // the minimum value of pwm that the motor can run
@@ -56,7 +55,8 @@ private:
 public:
     Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2,
             GPIO_TypeDef *e1GPIO, uint16_t e1Pin, GPIO_TypeDef *e2GPIO, uint16_t e2Pin,
-            double gearRatio, double minPosition, double maxPosition, double zeroPosition,
+            double gearRatio, double pulsePerRevolution,
+            double minPosition, double maxPosition, double zeroPosition,
             double kp, double ki, double kd);
     ~Servo();
 
@@ -79,6 +79,7 @@ public:
     double getMinPostion();
     double getMaxPostion();
 
+    int getEncoderPluse();
     double getRequestedPosition();
     double getCurrentPosition();
     double getControlValue();

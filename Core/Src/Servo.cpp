@@ -4,7 +4,8 @@
 
 Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2,
              GPIO_TypeDef *e1GPIO, uint16_t e1Pin, GPIO_TypeDef *e2GPIO, uint16_t e2Pin,
-             double gearRatio, double minPosition, double maxPosition, double zeroPosition,
+             double gearRatio, double pulsePerRevolution,
+             double minPosition, double maxPosition, double zeroPosition,
              double kp, double ki, double kd)
 {
     mE1GPIO = e1GPIO;
@@ -23,7 +24,7 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
     mOutputTimer = outputTimer;
     mOutputTimerCh1 = outputTimerCh1;
     mOutputTimerCh2 = outputTimerCh2;
-    mEncoderResolution = mResolution / SERVO_ENCODER_RESOLUTION;
+    mEncoderResolution = mResolution / pulsePerRevolution;
 
     PidParams params{kp / mResolution, ki / mResolution, kd / mResolution};
     mPidController = new PidController(&mError, &mOutput, SERVO_SAMPLE_TIME_S, params, -SERVO_PWM_RESOLUTION, SERVO_PWM_RESOLUTION);
@@ -260,6 +261,11 @@ double Servo::getMinPostion()
 double Servo::getMaxPostion()
 {
     return mMaxPosition;
+}
+
+int Servo::getEncoderPluse()
+{
+    return mEncoderPulse;
 }
 
 // Unit: degree

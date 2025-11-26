@@ -5,22 +5,22 @@
 #define CONNECTION_TIMEOUT 1000
 
 #define DEBUG_FRAME_DATA (0)
-#define DEBUG_PID_VALUE (1)
 
 DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, 98.775, -160, 170, 180, 20, 0, 5);
-    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, M6_E1_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, 1, 13, -160, 170, 180, 20, 0, 5);
+    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
+    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
+    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
+    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
+    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, M6_E1_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
 
     memset(&mTxDataFrame, 0, sizeof(DataFrame));
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
     setState(STATE_DISCONNECTED);
     mLastTime = 0;
     mSettingsData.autoSend = false;
+    mMonitorIndex = -1;
 
     mHspi = hspi;
     HAL_SPI_TransmitReceive_DMA(mHspi, mTxDataFrame.frame, mRxDataFrame.frame, SPI_FRAME_SIZE);
@@ -331,19 +331,77 @@ void DeviceController::run()
         setState(STATE_DISCONNECTED);
     }
 
-#if DEBUG_PID_VALUE
-    static uint32_t timeTick = 0;
-    static double position = 0;
-    if (HAL_GetTick() > timeTick && position != mServo[SERVO_TEST_INDEX]->getCurrentPosition())
+    if (mMonitorIndex >= 0 && mMonitorIndex < SERVO_NUMS)
     {
-        timeTick = HAL_GetTick() + 10;
-        position = mServo[SERVO_TEST_INDEX]->getCurrentPosition();
-        println("%.2f %.2f %.2f",
-                mServo[SERVO_TEST_INDEX]->getRequestedPosition(),
-                mServo[SERVO_TEST_INDEX]->getCurrentPosition(),
-                100 * mServo[SERVO_TEST_INDEX]->getControlValue() / SERVO_PWM_RESOLUTION);
+        static uint32_t preTimeTick = 0, timeTick = 0;
+        static double prePosition = 0, position = 0;
+        static double speed = 0;
+
+        double currentPositon = mServo[mMonitorIndex]->getCurrentPosition();
+
+        if (HAL_GetTick() - preTimeTick > 1000)
+        {
+            preTimeTick = HAL_GetTick();
+            speed = currentPositon - prePosition;
+            prePosition = currentPositon;
+        }
+        if (HAL_GetTick() - timeTick > 10 && position != currentPositon)
+        {
+            timeTick = HAL_GetTick();
+            position = currentPositon;
+            println("E%d S%.2f F%.2f V%.2f %.2fdeg/s %.2frpm",
+                    mServo[mMonitorIndex]->getEncoderPluse(),
+                    mServo[mMonitorIndex]->getRequestedPosition(),
+                    currentPositon,
+                    100 * mServo[mMonitorIndex]->getControlValue() / SERVO_PWM_RESOLUTION,
+                    speed,
+                    speed / 6);
+        }
     }
-#endif
+}
+
+void DeviceController::tune(int index, PidParams params)
+{
+    if (index < 0 || index >= SERVO_NUMS)
+    {
+        println("Invalid servo index %d", index);
+    }
+    mServo[index]->tune(params);
+}
+
+void DeviceController::debugMotor(int index)
+{
+    if (index < 0 || index >= SERVO_NUMS)
+    {
+        println("Invalid servo index %d", index);
+    }
+    println("Servo %d: request pos %.2f, current pos %.2f", index, mServo[index]->getRequestedPosition(), mServo[index]->getCurrentPosition());
+}
+
+void DeviceController::startMonitor(int index)
+{
+    if (index < 0 || index >= SERVO_NUMS)
+    {
+        println("Invalid servo index %d", index);
+    }
+    println("Start debugging %d", index);
+    mMonitorIndex = index;
+}
+
+void DeviceController::stopMonitor()
+{
+    println("Stop debugging");
+    mMonitorIndex = -1;
+}
+
+bool DeviceController::isMonitoring()
+{
+    return mMonitorIndex >= 0 && mMonitorIndex < SERVO_NUMS;
+}
+
+int DeviceController::getMonitorIndex()
+{
+    return mMonitorIndex;
 }
 
 bool DeviceController::startZeroDetection(int index)

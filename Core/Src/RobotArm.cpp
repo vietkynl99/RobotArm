@@ -68,9 +68,14 @@ bool onCommandReboot(string params)
 
 bool onCommandPosition(string params)
 {
+    if (!mController->isMonitoring())
+    {
+        println("You need to set debug index first.");
+        return true;
+    }
     if (params.empty())
     {
-        println("Current position: %.6f", mController->getCurrentPosition(SERVO_TEST_INDEX));
+        println("Current position: %.6f", mController->getCurrentPosition(mController->getMonitorIndex()));
         return true;
     }
     else
@@ -78,7 +83,7 @@ bool onCommandPosition(string params)
         float setpoint = 0;
         if (sscanf(params.c_str(), "%f", &setpoint) == 1)
         {
-            mController->requestPosition(SERVO_TEST_INDEX, setpoint);
+            mController->requestPosition(mController->getMonitorIndex(), setpoint);
             return true;
         }
     }
@@ -87,12 +92,72 @@ bool onCommandPosition(string params)
 
 bool onCommandZeroDetect(string params)
 {
+    if (!mController->isMonitoring())
+    {
+        println("You need to set debug index first.");
+        return true;
+    }
     if (!params.empty())
     {
         return false;
     }
-    mController->startZeroDetection(SERVO_TEST_INDEX);
+    mController->startZeroDetection(mController->getMonitorIndex());
     return true;
+}
+
+bool onCommandTune(string params)
+{
+    if (!params.empty())
+    {
+        return false;
+    }
+    int index = 0;
+    float kp, ki, kd;
+    if (sscanf(params.c_str(), "%d %f %f %f", &index, &kp, &ki, &kd) == 4 && index >= 0 && index <= SERVO_NUMS)
+    {
+        mController->tune(index, PidParams{kp, ki, kd});
+        return true;
+    }
+    return false;
+}
+
+bool onCommandDebug(string params)
+{
+    if (params.empty())
+    {
+        return false;
+    }
+
+    int index = 0;
+    if (sscanf(params.c_str(), "%d", &index) == 1 && index >= 0 && index <= SERVO_NUMS)
+    {
+        mController->debugMotor(index);
+        return true;
+    }
+    return false;
+}
+
+bool onCommandMonitor(string params)
+{
+    if (params.empty())
+    {
+        return false;
+    }
+
+    int index = 0;
+    if (sscanf(params.c_str(), "%d", &index) == 1 && index >= -1 && index <= SERVO_NUMS)
+    {
+        if (index == -1)
+        {
+            mController->stopMonitor();
+        }
+        else
+        {
+            mController->startMonitor(index);
+        }
+        return true;
+    }
+    return false;
 }
 
 void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
@@ -103,6 +168,9 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
     CommandLine::install("position", onCommandPosition, "position [value]\t: rotate the servo to position\r\nservo-position\t: get current position");
     CommandLine::install("zero-detect", onCommandZeroDetect, "zero-detect\t: Zero dectection");
+    CommandLine::install("tune", onCommandTune, "tune [index] [kp] [ki] [kd] \t: tune PID params");
+    CommandLine::install("debug", onCommandDebug, "debug [index]\t: debug servo at index");
+    CommandLine::install("monitor", onCommandMonitor, "monitor -1\t: stop monitor\r\nmonitor [index]\t: monitor servo position at index");
 
     mController = new DeviceController(htim1, htim2, htim3, hspi);
 }
