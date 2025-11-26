@@ -2,10 +2,15 @@
 #include <stdio.h>
 #include <cstdlib>
 
-Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp, double ki, double kd)
+Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2,
+             GPIO_TypeDef *e1GPIO, uint16_t e1Pin, GPIO_TypeDef *e2GPIO, uint16_t e2Pin,
+             double gearRatio, double minPosition, double maxPosition, double zeroPosition,
+             double kp, double ki, double kd)
 {
-    mState = SERVO_STATE_DISABLED;
-    mSpeed = 0;
+    mE1GPIO = e1GPIO;
+    mE1Pin = e1Pin;
+    mE2GPIO = e2GPIO;
+    mE2Pin = e2Pin;
 #if SERVO_ENABLE_ERR_DETECTION
     mTick = 0;
 #endif
@@ -44,9 +49,9 @@ Servo::~Servo()
     }
 }
 
-void Servo::onEncoderEvent(bool direction)
+void Servo::onEncoderEvent()
 {
-    if (direction)
+    if (!HAL_GPIO_ReadPin(mE2GPIO, mE2Pin))
     {
         mEncoderPulse++;
     }
@@ -235,6 +240,16 @@ bool Servo::requestSpeed(double rpm)
     mSpeed = rpm * 0.006;
     mOriginTime = HAL_GetTick();
     return true;
+}
+
+uint16_t Servo::getE1Pin()
+{
+    return mE1Pin;
+}
+
+uint16_t Servo::getE2Pin()
+{
+    return mE2Pin;
 }
 
 double Servo::getMinPostion()

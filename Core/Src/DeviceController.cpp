@@ -9,12 +9,12 @@
 
 DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 5);
-    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, 98.775, -160, 170, 180, 20, 0, 0);
-    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E2_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, 98.775, -160, 170, 180, 20, 0, 5);
+    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E2_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E2_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E2_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E2_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
+    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, M6_E2_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin, 98.775, -160, 170, 180, 20, 0, 0);
 
     memset(&mTxDataFrame, 0, sizeof(DataFrame));
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
@@ -159,29 +159,13 @@ DeviceState DeviceController::verifyDataFrame(const DataFrame &frame)
 
 void DeviceController::onEncoderEvent(uint16_t pin)
 {
-    if (pin == M1_E1_Pin)
+    for (int i = 0; i < SERVO_NUMS; i++)
     {
-        mServo[0]->onEncoderEvent(!HAL_GPIO_ReadPin(M1_E2_GPIO_Port, M1_E2_Pin));
-    }
-    else if (pin == M2_E1_Pin)
-    {
-        mServo[1]->onEncoderEvent(!HAL_GPIO_ReadPin(M2_E2_GPIO_Port, M2_E2_Pin));
-    }
-    else if (pin == M3_E1_Pin)
-    {
-        mServo[2]->onEncoderEvent(!HAL_GPIO_ReadPin(M3_E2_GPIO_Port, M3_E2_Pin));
-    }
-    else if (pin == M4_E1_Pin)
-    {
-        mServo[3]->onEncoderEvent(!HAL_GPIO_ReadPin(M4_E2_GPIO_Port, M4_E2_Pin));
-    }
-    else if (pin == M5_E1_Pin)
-    {
-        mServo[4]->onEncoderEvent(!HAL_GPIO_ReadPin(M5_E2_GPIO_Port, M5_E2_Pin));
-    }
-    else if (pin == M6_E1_Pin)
-    {
-        mServo[5]->onEncoderEvent(!HAL_GPIO_ReadPin(M6_E2_GPIO_Port, M6_E2_Pin));
+        if (pin == mServo[i]->getE1Pin())
+        {
+            mServo[i]->onEncoderEvent();
+            break;
+        }
     }
 }
 

@@ -30,6 +30,10 @@ private:
     double mPrevError;
 #endif
 
+    GPIO_TypeDef *mE1GPIO;
+    GPIO_TypeDef *mE2GPIO;
+    uint16_t mE1Pin;
+    uint16_t mE2Pin;
     int64_t mEncoderPulse;
     double mEncoderResolution;
     double mResolution;
@@ -50,10 +54,13 @@ private:
 #endif
 
 public:
-    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2, double gearRatio, double minPosition, double maxPosition, double zeroPosition, double kp, double ki, double kd);
+    Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2,
+            GPIO_TypeDef *e1GPIO, uint16_t e1Pin, GPIO_TypeDef *e2GPIO, uint16_t e2Pin,
+            double gearRatio, double minPosition, double maxPosition, double zeroPosition,
+            double kp, double ki, double kd);
     ~Servo();
 
-    void onEncoderEvent(bool direction);
+    void onEncoderEvent();
     void onZeroDectected();
 
     void setState(ServoState state);
@@ -65,6 +72,9 @@ public:
     bool zeroDetect();
     bool requestPosition(double postion);
     bool requestSpeed(double speed);
+
+    uint16_t getE1Pin();
+    uint16_t getE2Pin();
 
     double getMinPostion();
     double getMaxPostion();
