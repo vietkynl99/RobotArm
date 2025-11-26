@@ -51,3 +51,6 @@
 
 # Tmp files
 .mxproject
+
+# Others
+Core/Inc/BuildEnv.h

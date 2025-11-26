@@ -1,3 +1,4 @@
+#include "BuildEnv.h"
 #include "RobotArm.h"
 #include "CommandLine.h"
 #include "DeviceController.h"
@@ -97,7 +98,7 @@ bool onCommandZeroDetect(string params)
 void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
     println("");
-    println("*** Robot Arm ***");
+    println("*** Robot Arm - ver " GIT_VERSION " ***");
     CommandLine::init();
     CommandLine::install("reboot", onCommandReboot, "reboot\t: reboot device");
     CommandLine::install("position", onCommandPosition, "position [value]\t: rotate the servo to position\r\nservo-position\t: get current position");
