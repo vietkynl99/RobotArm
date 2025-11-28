@@ -3,17 +3,16 @@
 #include <cstring>
 
 #define CONNECTION_TIMEOUT 1000
-
 #define DEBUG_FRAME_DATA (0)
 
 DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, 1, 13, -160, 170, 180, 20, 0, 5);
-    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
-    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
-    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
-    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
-    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, M6_E1_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin, 98.775, 1, -160, 170, 180, 20, 0, 0);
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160000, 170000, 180}, PidParams{100, 0, 10});
+    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, M6_E1_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
 
     memset(&mTxDataFrame, 0, sizeof(DataFrame));
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
@@ -51,9 +50,29 @@ void DeviceController::forceOutput(int index, int pwmValue)
         }
         else
         {
-            println("forceOutput servo %d: %d", pwmValue);
-            mServo[index]->setOutput(SERVO_STATE_DISABLED);
+            println("forceOutput servo %d: %d", index, pwmValue);
+            mServo[index]->setOutput(pwmValue);
         }
+    }
+}
+
+void DeviceController::enableServo(int index)
+{
+    if (index >= 0 && index < SERVO_NUMS)
+    {
+        if (mServo[index]->getState() != SERVO_STATE_RUNNING)
+        {
+            println("Enable servo %d", index);
+            mServo[index]->setState(SERVO_STATE_RUNNING);
+        }
+    }
+}
+
+void DeviceController::enableServos()
+{
+    for (int i = 0; i < SERVO_NUMS; i++)
+    {
+        enableServo(i);
     }
 }
 
@@ -61,7 +80,7 @@ void DeviceController::disableServo(int index)
 {
     if (index >= 0 && index < SERVO_NUMS)
     {
-        if (mServo[index]->getState() != SERVO_STATE_ERROR && mServo[index]->getState() != SERVO_STATE_DISABLED)
+        if (mServo[index]->getState() != SERVO_STATE_DISABLED)
         {
             println("Disable servo %d", index);
             mServo[index]->setState(SERVO_STATE_DISABLED);
@@ -76,6 +95,14 @@ void DeviceController::disableServos()
         disableServo(i);
     }
 }
+void DeviceController::reset(int index, double position)
+{
+    if (index >= 0 && index < SERVO_NUMS)
+    {
+        mServo[index]->reset(position);
+    }
+}
+
 
 string DeviceController::getString(const DataFrame &frame)
 {
@@ -270,8 +297,8 @@ void DeviceController::onDataReceived()
                 useDefaultReponse = false;
                 memset(&servoParamsData, 0, sizeof(ServoParamsData));
                 servoParamsData.index = index;
-                servoParamsData.minPosition = mServo[index]->getMinPostion();
-                servoParamsData.maxPosition = mServo[index]->getMaxPostion();
+                servoParamsData.minPosition = mServo[index]->getPositionLimit().min;
+                servoParamsData.maxPosition = mServo[index]->getPositionLimit().max;
                 create(mTxDataFrame, mRxDataFrame.pack.command, &servoParamsData, sizeof(ServoParamsData), RESP_CODE_SUCCESS);
             }
             break;
@@ -369,7 +396,7 @@ void DeviceController::run()
             speed = currentPositon - prePosition;
             prePosition = currentPositon;
         }
-        if (HAL_GetTick() - timeTick > 10 && position != currentPositon)
+        if (HAL_GetTick() - timeTick > 100 && abs(position - currentPositon) > 1)
         {
             timeTick = HAL_GetTick();
             position = currentPositon;
@@ -377,7 +404,7 @@ void DeviceController::run()
                     mServo[mMonitorIndex]->getEncoderPluse(),
                     mServo[mMonitorIndex]->getRequestedPosition(),
                     currentPositon,
-                    100 * mServo[mMonitorIndex]->getControlValue() / SERVO_PWM_RESOLUTION,
+                    mServo[mMonitorIndex]->getControlValue(),
                     speed,
                     speed / 6);
         }
@@ -396,11 +423,7 @@ void DeviceController::debugMotor(int index)
 {
     if (index >= 0 && index < SERVO_NUMS)
     {
-        println("Servo %d: state %d, request pos %.2f, current pos %.2f",
-                index,
-                mServo[index]->getState(),
-                mServo[index]->getRequestedPosition(),
-                mServo[index]->getCurrentPosition());
+        mServo[index]->printData();
     }
 }
 
@@ -417,16 +440,6 @@ void DeviceController::stopMonitor()
 {
     println("Stop debugging");
     mMonitorIndex = -1;
-}
-
-bool DeviceController::isMonitoring()
-{
-    return mMonitorIndex >= 0 && mMonitorIndex < SERVO_NUMS;
-}
-
-int DeviceController::getMonitorIndex()
-{
-    return mMonitorIndex;
 }
 
 bool DeviceController::startZeroDetection(int index)

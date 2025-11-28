@@ -4,6 +4,7 @@
 #include <string>
 #include <cassert>
 #include "main.h"
+#include "Config.h"
 #include "Servo.h"
 
 using namespace std;
@@ -129,15 +130,16 @@ public:
     void debugMotor(int index);
     void startMonitor(int index);
     void stopMonitor();
-    bool isMonitoring();
-    int getMonitorIndex();
     bool startZeroDetection(int index);
     bool requestPosition(int index, float position);
     float getCurrentPosition(int index);
     
     void forceOutput(int index, int pwmValue);
+    void enableServo(int index);
+    void enableServos();
     void disableServo(int index);
     void disableServos();
+    void reset(int index, double position = 0);
 
 private:
     const char *deviceStateToString(int deviceState);

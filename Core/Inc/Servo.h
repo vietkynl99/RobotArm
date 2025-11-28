@@ -1,6 +1,7 @@
 #ifndef INC_SERVO_H_
 #define INC_SERVO_H_
 
+#include "Config.h"
 #include "RobotArm.h"
 #include "PidController.h"
 
@@ -15,9 +16,16 @@ enum ServoState
 {
     SERVO_STATE_ERROR,
     SERVO_STATE_DISABLED,
-    SERVO_STATE_ZERO_DETECTION,
-    SERVO_STATE_POSITION
+    SERVO_STATE_RUNNING
 };
+
+enum ServoMode
+{
+    SERVO_MODE_SPEED,
+    SERVO_MODE_POSITION
+};
+
+using namespace std;
 
 class Servo
 {
@@ -36,9 +44,7 @@ private:
     int64_t mEncoderPulse;
     double mEncoderResolution;
     double mResolution;
-    double mMinPosition;
-    double mMaxPosition;
-    double mZeroPosition;
+    PositionLimit mPositionLimit;
     double mSpeed;
 
     PidController *mPidController;
@@ -46,6 +52,7 @@ private:
     uint16_t mOutputTimerCh1;
     uint16_t mOutputTimerCh2;
     ServoState mState;
+    ServoMode mMode;
     uint32_t mOriginTime;
 #if SERVO_ENABLE_ERR_DETECTION
     uint8_t mTick;
@@ -55,16 +62,16 @@ private:
 public:
     Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2,
             GPIO_TypeDef *e1GPIO, uint16_t e1Pin, GPIO_TypeDef *e2GPIO, uint16_t e2Pin,
-            double gearRatio, double pulsePerRevolution,
-            double minPosition, double maxPosition, double zeroPosition,
-            double kp, double ki, double kd);
+            GearBox gearBox, PositionLimit positionLimit, PidParams params);
     ~Servo();
 
     void onEncoderEvent();
     void onZeroDectected();
 
     void setState(ServoState state);
-    int getState();
+    void setMode(ServoMode mode);
+    ServoState getState();
+    ServoMode getMode();
 
     void tune(PidParams params);
     void run();
@@ -75,18 +82,18 @@ public:
 
     uint16_t getE1Pin();
     uint16_t getE2Pin();
-
-    double getMinPostion();
-    double getMaxPostion();
-
+    PositionLimit getPositionLimit();
     int getEncoderPluse();
     double getRequestedPosition();
     double getCurrentPosition();
     double getControlValue();
 
     void setOutput(int value);
+    void printData();
 
 private:
     double map(double input, double inMin, double inMax, double outMin, double outMax);
+    const char* toString(ServoState value);
+    const char* toString(ServoMode value);
 };
 #endif /* INC_SERVO_H_ */
