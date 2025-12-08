@@ -103,8 +103,14 @@ ServoMode Servo::getMode()
     return mMode;
 }
 
+PidParams Servo::getPidParams()
+{
+    return mPidParams;
+}
+
 void Servo::tune(PidParams params)
 {
+    mPidParams = params;
     params.kp /= mResolution;
     params.ki /= mResolution;
     params.kd /= mResolution;

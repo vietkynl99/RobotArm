@@ -1,6 +1,8 @@
 #ifndef INC_CONFIG_H_
 #define INC_CONFIG_H_
 
+#define SERVO_NUMS          (6)
+
 typedef struct
 {
     float ratio;

@@ -46,6 +46,7 @@ private:
     double mResolution;
     PositionLimit mPositionLimit;
     double mSpeed;
+    PidParams mPidParams;
 
     PidController *mPidController;
     TIM_HandleTypeDef *mOutputTimer;
@@ -72,6 +73,7 @@ public:
     void setMode(ServoMode mode);
     ServoState getState();
     ServoMode getMode();
+    PidParams getPidParams();
 
     void tune(PidParams params);
     void run();
