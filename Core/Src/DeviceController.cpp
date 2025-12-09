@@ -47,7 +47,7 @@ void DeviceController::run()
                 mDataFrameMap[mCurrentComamnd].data.jointSetting.gearBox = mServo[index]->getGearBox();
                 mDataFrameMap[mCurrentComamnd].data.jointSetting.positionLimit = mServo[index]->getPositionLimit();
                 mDataFrameMap[mCurrentComamnd].data.jointSetting.pidParams = mServo[index]->getPidParams();
-                PacketPacker::updateChecksum(mDataFrameMap[mCurrentComamnd]);
+                PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
             }
             break;
         }
@@ -60,7 +60,7 @@ void DeviceController::run()
                 mDataFrameMap[mCurrentComamnd].data.jointStatus.state = static_cast<uint8_t>(mServo[index]->getState());
                 mDataFrameMap[mCurrentComamnd].data.jointStatus.setpoint = static_cast<float>(mServo[index]->getRequestedPosition());
                 mDataFrameMap[mCurrentComamnd].data.jointStatus.position = static_cast<float>(mServo[index]->getCurrentPosition());
-                PacketPacker::updateChecksum(mDataFrameMap[mCurrentComamnd]);
+                PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
             }
             break;
         }
@@ -72,7 +72,7 @@ void DeviceController::run()
                 mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.state[i] = static_cast<uint8_t>(mServo[i]->getState());
                 mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.setpoint[i] = static_cast<float>(mServo[i]->getRequestedPosition());
                 mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.position[i] = static_cast<float>(mServo[i]->getCurrentPosition());
-                PacketPacker::updateChecksum(mDataFrameMap[mCurrentComamnd]);
+                PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
             }
             break;
         }

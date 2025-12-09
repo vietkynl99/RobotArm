@@ -82,7 +82,7 @@ typedef struct
     uint16_t magicNumber;
     uint8_t command;
     PackedData data;
-    uint8_t checksum;
+    uint16_t crc;
 } DataFrame;
 #pragma pack(pop)
 

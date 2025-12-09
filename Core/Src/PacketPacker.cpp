@@ -14,32 +14,34 @@ DataFrame PacketPacker::create(uint8_t command, const uint8_t *data, size_t leng
         memcpy(frame.data.data, data, length);
     }
 
-    updateChecksum(frame);
+    update(frame);
     return frame;
 }
 
-void PacketPacker::updateChecksum(DataFrame &frame)
+void PacketPacker::update(DataFrame &frame)
 {
-    frame.checksum = 0;
-    const uint8_t *bytePtr = reinterpret_cast<const uint8_t *>(&frame);
-    for (size_t i = 0; i < sizeof(frame) - 1; ++i)
-    {
-        frame.checksum += bytePtr[i];
-    }
+    frame.crc = crc16_modbus((const uint8_t *)&frame, sizeof(DataFrame) - 2);
 }
 
 bool PacketPacker::verify(const DataFrame &frame)
 {
-    if (frame.magicNumber != MAGIC_NUMBER)
-    {
-        return false;
-    }
+    return frame.magicNumber == MAGIC_NUMBER && frame.crc == crc16_modbus((const uint8_t *)&frame, sizeof(DataFrame) - 2);
+}
 
-    uint8_t checksum = 0;
-    const uint8_t *bytePtr = reinterpret_cast<const uint8_t *>(&frame);
-    for (size_t i = 0; i < sizeof(frame) - 1; ++i)
+// CRC16-MODBUS, poly = 0xA001, init = 0xFFFF, LSB-first
+uint16_t PacketPacker::crc16_modbus(const uint8_t *data, uint16_t len)
+{
+    uint16_t crc = 0xFFFF;
+    for (uint16_t i = 0; i < len; i++)
     {
-        checksum += bytePtr[i];
+        crc ^= data[i];
+        for (uint8_t j = 0; j < 8; j++)
+        {
+            if (crc & 0x0001)
+                crc = (crc >> 1) ^ 0xA001;
+            else
+                crc >>= 1;
+        }
     }
-    return checksum == frame.checksum;
+    return crc;
 }

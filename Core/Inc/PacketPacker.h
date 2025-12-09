@@ -11,8 +11,9 @@ class PacketPacker
 {
 public:
     static DataFrame create(uint8_t command, const uint8_t *data, size_t length);
-    static void updateChecksum(DataFrame &frame);
+    static void update(DataFrame &frame);
     static bool verify(const DataFrame &frame);
+    static uint16_t crc16_modbus(const uint8_t *data, uint16_t len);
 };
 
 #endif
