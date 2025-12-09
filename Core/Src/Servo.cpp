@@ -13,14 +13,12 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
 #if SERVO_ENABLE_ERR_DETECTION
     mTick = 0;
 #endif
-    mPositionLimit = positionLimit;
-
-    mResolution = 360 / gearBox.ratio;
-
     mOutputTimer = outputTimer;
     mOutputTimerCh1 = outputTimerCh1;
     mOutputTimerCh2 = outputTimerCh2;
-    mEncoderResolution = mResolution / gearBox.encoderResolution;
+
+    setGearBox(gearBox);
+    setPositionLimit(positionLimit);
 
     mPidController = new PidController(&mError, &mOutput, SERVO_SAMPLE_TIME_S, -SERVO_PWM_RESOLUTION, SERVO_PWM_RESOLUTION);
     tune(params);
@@ -103,9 +101,31 @@ ServoMode Servo::getMode()
     return mMode;
 }
 
+GearBox Servo::getGearBox()
+{
+    return mGearBox;
+}
+
+PositionLimit Servo::getPositionLimit()
+{
+    return mPositionLimit;
+}
+
 PidParams Servo::getPidParams()
 {
     return mPidParams;
+}
+
+void Servo::setGearBox(GearBox gearBox)
+{
+    mGearBox = gearBox;
+    mResolution = 360 / gearBox.ratio;
+    mEncoderResolution = mResolution / gearBox.encoderResolution;
+}
+
+void Servo::setPositionLimit(PositionLimit positionLimit)
+{
+    mPositionLimit = positionLimit;
 }
 
 void Servo::tune(PidParams params)
@@ -306,11 +326,6 @@ uint16_t Servo::getE2Pin()
     return mE2Pin;
 }
 
-PositionLimit Servo::getPositionLimit()
-{
-    return mPositionLimit;
-}
-
 int Servo::getEncoderPluse()
 {
     return mEncoderPulse;
@@ -336,9 +351,17 @@ double Servo::getControlValue()
 
 void Servo::printData()
 {
-    println("state %s, mode %s, S%.2f, F%.2f, V%.2f",
+    println("state %s, mode %s, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f}, S%.2f, F%.2f, V%.2f",
             toString(getState()),
             toString(getMode()),
+            mGearBox.ratio,
+            mGearBox.encoderResolution,
+            mPositionLimit.min,
+            mPositionLimit.max,
+            mPositionLimit.zero,
+            mPidParams.kp,
+            mPidParams.ki,
+            mPidParams.kd,
             getRequestedPosition(),
             getCurrentPosition(),
             getControlValue());

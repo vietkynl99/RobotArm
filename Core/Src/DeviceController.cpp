@@ -2,8 +2,8 @@
 #include "Log.h"
 #include <cstring>
 
-#define CONNECTION_TIMEOUT 1000
-#define DEBUG_FRAME_DATA (0)
+static const GearBox GearBox_Motor370_12VDC_72rpm{64, 13};
+static const GearBox GearBox_Motor_12VDC_80rpm{98.775, 1};
 
 DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
@@ -34,24 +34,44 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
 void DeviceController::run()
 {
     // Update data frame for the current command
-    if (HAL_GetTick() - mCmdTimeTick > 20)
+    if (HAL_GetTick() - mCmdTimeTick > 5)
     {
         mCmdTimeTick = HAL_GetTick();
         switch (mCurrentComamnd)
         {
-        case CMD_GET_JOINT_STATE:
+        case CMD_SET_JOINT_SETTING:
         {
-            uint8_t index = mDataFrameMap[mCurrentComamnd].data.jointState.index;
+            uint8_t index = mDataFrameMap[mCurrentComamnd].data.jointSetting.index;
             if (index >= 0 && index < SERVO_NUMS)
             {
-                mDataFrameMap[mCurrentComamnd].data.jointState.mode = static_cast<uint8_t>(mServo[index]->getMode());
-                mDataFrameMap[mCurrentComamnd].data.jointState.state = static_cast<uint8_t>(mServo[index]->getState());
-                PidParams params = mServo[index]->getPidParams();
-                mDataFrameMap[mCurrentComamnd].data.jointState.kp = params.kp;
-                mDataFrameMap[mCurrentComamnd].data.jointState.ki = params.ki;
-                mDataFrameMap[mCurrentComamnd].data.jointState.kd = params.kd;
-                mDataFrameMap[mCurrentComamnd].data.jointState.setpoint = static_cast<float>(mServo[index]->getRequestedPosition());
-                mDataFrameMap[mCurrentComamnd].data.jointState.position = static_cast<float>(mServo[index]->getCurrentPosition());
+                mDataFrameMap[mCurrentComamnd].data.jointSetting.gearBox = mServo[index]->getGearBox();
+                mDataFrameMap[mCurrentComamnd].data.jointSetting.positionLimit = mServo[index]->getPositionLimit();
+                mDataFrameMap[mCurrentComamnd].data.jointSetting.pidParams = mServo[index]->getPidParams();
+                PacketPacker::updateChecksum(mDataFrameMap[mCurrentComamnd]);
+            }
+            break;
+        }
+        case CMD_GET_JOINT_STATUS:
+        {
+            uint8_t index = mDataFrameMap[mCurrentComamnd].data.jointStatus.index;
+            if (index >= 0 && index < SERVO_NUMS)
+            {
+                mDataFrameMap[mCurrentComamnd].data.jointStatus.mode = static_cast<uint8_t>(mServo[index]->getMode());
+                mDataFrameMap[mCurrentComamnd].data.jointStatus.state = static_cast<uint8_t>(mServo[index]->getState());
+                mDataFrameMap[mCurrentComamnd].data.jointStatus.setpoint = static_cast<float>(mServo[index]->getRequestedPosition());
+                mDataFrameMap[mCurrentComamnd].data.jointStatus.position = static_cast<float>(mServo[index]->getCurrentPosition());
+                PacketPacker::updateChecksum(mDataFrameMap[mCurrentComamnd]);
+            }
+            break;
+        }
+        case CMD_SET_GET_MULTI_DOF_STATUS:
+        {
+            for (int i = 0; i < SERVO_NUMS; i++)
+            {
+                mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.mode[i] = static_cast<uint8_t>(mServo[i]->getMode());
+                mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.state[i] = static_cast<uint8_t>(mServo[i]->getState());
+                mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.setpoint[i] = static_cast<float>(mServo[i]->getRequestedPosition());
+                mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.position[i] = static_cast<float>(mServo[i]->getCurrentPosition());
                 PacketPacker::updateChecksum(mDataFrameMap[mCurrentComamnd]);
             }
             break;
@@ -232,10 +252,27 @@ void DeviceController::onDataReceived()
             // extra processing for specific commands
             switch (mCurrentComamnd)
             {
-            case CMD_GET_JOINT_STATE:
+            case CMD_SET_JOINT_SETTING:
             {
-                // Save index
-                mDataFrameMap[mCurrentComamnd].data.jointState.index = mRxDataFrame.data.jointState.index;
+                int index = mRxDataFrame.data.jointSetting.index;
+                if (index < 0 || index > SERVO_NUMS)
+                {
+                    break;
+                }
+                mDataFrameMap[mCurrentComamnd].data.jointSetting.index = index;
+                mServo[index]->setGearBox(mRxDataFrame.data.jointSetting.gearBox);
+                mServo[index]->setPositionLimit(mRxDataFrame.data.jointSetting.positionLimit);
+                mServo[index]->tune(mRxDataFrame.data.jointSetting.pidParams);
+                break;
+            }
+            case CMD_GET_JOINT_STATUS:
+            {
+                int index = mRxDataFrame.data.jointStatus.index;
+                if (index < 0 || index > SERVO_NUMS)
+                {
+                    break;
+                }
+                mDataFrameMap[mCurrentComamnd].data.jointStatus.index = index;
                 break;
             }
             default:

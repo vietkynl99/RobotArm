@@ -1,7 +1,6 @@
 #ifndef INC_SERVO_H_
 #define INC_SERVO_H_
 
-#include "Config.h"
 #include "RobotArm.h"
 #include "PidController.h"
 
@@ -44,8 +43,9 @@ private:
     int64_t mEncoderPulse;
     double mEncoderResolution;
     double mResolution;
-    PositionLimit mPositionLimit;
     double mSpeed;
+    GearBox mGearBox;
+    PositionLimit mPositionLimit;
     PidParams mPidParams;
 
     PidController *mPidController;
@@ -73,8 +73,12 @@ public:
     void setMode(ServoMode mode);
     ServoState getState();
     ServoMode getMode();
+    GearBox getGearBox();
+    PositionLimit getPositionLimit();
     PidParams getPidParams();
 
+    void setGearBox(GearBox gearBox);
+    void setPositionLimit(PositionLimit positionLimit);
     void tune(PidParams params);
     void run();
     void reset(double position = 0);
@@ -84,7 +88,6 @@ public:
 
     uint16_t getE1Pin();
     uint16_t getE2Pin();
-    PositionLimit getPositionLimit();
     int getEncoderPluse();
     double getRequestedPosition();
     double getCurrentPosition();

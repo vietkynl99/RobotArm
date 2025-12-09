@@ -3,7 +3,6 @@
 
 #include <string>
 #include "main.h"
-#include "Config.h"
 #include "PacketPacker.h"
 #include "Servo.h"
 

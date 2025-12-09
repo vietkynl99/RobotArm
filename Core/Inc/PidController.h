@@ -1,12 +1,7 @@
 #ifndef INC_PIDCONTROLLER_H_
 #define INC_PIDCONTROLLER_H_
 
-typedef struct
-{
-    double kp;
-    double ki;
-    double kd;
-} PidParams;
+#include "SpiTransferType.h"
 
 class PidController
 {
