@@ -6,8 +6,6 @@
 
 #define SERVO_SAMPLE_TIME_S         (1E-3)  // must matched with timer interrupt
 #define SERVO_PWM_RESOLUTION        (999)   // must matched with timer pwm generator
-#define SERVO_FIXED_PWN_OUT         (170)   // the minimum value of pwm that the motor can run
-#define SERVO_FIXED_PWN_IN          (0.3)   // the minimum value of pwm that the motor can run
 #define SERVO_ENABLE_ERR_DETECTION  (1)     // enable the error detection
 #define SERVO_ZERO_DETECTION_SPEED  (10)    // [rpm] enable the error detection
 
@@ -97,7 +95,6 @@ public:
     void printData();
 
 private:
-    double map(double input, double inMin, double inMax, double outMin, double outMax);
     const char* toString(ServoState value);
     const char* toString(ServoMode value);
 };

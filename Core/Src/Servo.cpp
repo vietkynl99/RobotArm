@@ -175,22 +175,7 @@ void Servo::run()
     }
 #endif
     mPidController->run();
-
-    double fixedOutput = mOutput;
-    if (fixedOutput > -SERVO_FIXED_PWN_IN && fixedOutput < SERVO_FIXED_PWN_IN)
-    {
-        fixedOutput = map(fixedOutput, -SERVO_FIXED_PWN_IN, SERVO_FIXED_PWN_IN, -SERVO_FIXED_PWN_OUT, SERVO_FIXED_PWN_OUT);
-    }
-    else if (fixedOutput > 0)
-    {
-        fixedOutput = map(fixedOutput, SERVO_FIXED_PWN_IN, SERVO_PWM_RESOLUTION, SERVO_FIXED_PWN_OUT, SERVO_PWM_RESOLUTION);
-    }
-    else
-    {
-        fixedOutput = map(fixedOutput, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_IN, -SERVO_PWM_RESOLUTION, -SERVO_FIXED_PWN_OUT);
-    }
-
-    setOutput(fixedOutput);
+    setOutput(mOutput);
 }
 
 void Servo::reset(double position)
@@ -216,20 +201,6 @@ bool Servo::zeroDetect()
     setMode(SERVO_MODE_SPEED);
     requestSpeed(SERVO_ZERO_DETECTION_SPEED);
     return true;
-}
-
-double Servo::map(double input, double inMin, double inMax, double outMin, double outMax)
-{
-    double result = outMin + (input - inMin) * (outMax - outMin) / (inMax - inMin);
-    if (result < outMin)
-    {
-        return outMin;
-    }
-    if (result > outMax)
-    {
-        return outMax;
-    }
-    return result;
 }
 
 const char *Servo::toString(ServoState value)
@@ -351,7 +322,7 @@ double Servo::getControlValue()
 
 void Servo::printData()
 {
-    println("state %s, mode %s, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f}, S%.2f, F%.2f, V%.2f",
+    println("state %s, mode %s, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f, %.2f %.2f}, S%.2f, F%.2f, V%.2f",
             toString(getState()),
             toString(getMode()),
             mGearBox.ratio,
@@ -362,6 +333,8 @@ void Servo::printData()
             mPidParams.kp,
             mPidParams.ki,
             mPidParams.kd,
+            mPidParams.boostedInput,
+            mPidParams.boostedOutput,
             getRequestedPosition(),
             getCurrentPosition(),
             getControlValue());

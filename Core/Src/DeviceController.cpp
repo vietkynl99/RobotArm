@@ -13,12 +13,12 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
     mCmdTimeTick = 0;
     mPreTxFramePtr = nullptr;
 
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160000, 170000, 180}, PidParams{100, 0, 10});
-    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
-    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
-    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
-    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
-    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, M6_E1_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160000, 170000, 180}, PidParams{100, 0, 10, 0.1, 0.5});
+    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0, 0, 0});
+    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0, 0, 0});
+    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0, 0, 0});
+    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0, 0, 0});
+    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, M6_E1_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0, 0, 0});
 
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
 
@@ -37,48 +37,6 @@ void DeviceController::run()
     if (HAL_GetTick() - mCmdTimeTick > 5)
     {
         mCmdTimeTick = HAL_GetTick();
-        switch (mCurrentComamnd)
-        {
-        case CMD_SET_JOINT_SETTING:
-        {
-            uint8_t index = mDataFrameMap[mCurrentComamnd].data.jointSetting.index;
-            if (index >= 0 && index < SERVO_NUMS)
-            {
-                mDataFrameMap[mCurrentComamnd].data.jointSetting.gearBox = mServo[index]->getGearBox();
-                mDataFrameMap[mCurrentComamnd].data.jointSetting.positionLimit = mServo[index]->getPositionLimit();
-                mDataFrameMap[mCurrentComamnd].data.jointSetting.pidParams = mServo[index]->getPidParams();
-                PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
-            }
-            break;
-        }
-        case CMD_GET_JOINT_STATUS:
-        {
-            uint8_t index = mDataFrameMap[mCurrentComamnd].data.jointStatus.index;
-            if (index >= 0 && index < SERVO_NUMS)
-            {
-                mDataFrameMap[mCurrentComamnd].data.jointStatus.mode = static_cast<uint8_t>(mServo[index]->getMode());
-                mDataFrameMap[mCurrentComamnd].data.jointStatus.state = static_cast<uint8_t>(mServo[index]->getState());
-                mDataFrameMap[mCurrentComamnd].data.jointStatus.setpoint = static_cast<float>(mServo[index]->getRequestedPosition());
-                mDataFrameMap[mCurrentComamnd].data.jointStatus.position = static_cast<float>(mServo[index]->getCurrentPosition());
-                PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
-            }
-            break;
-        }
-        case CMD_SET_GET_MULTI_DOF_STATUS:
-        {
-            for (int i = 0; i < SERVO_NUMS; i++)
-            {
-                mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.mode[i] = static_cast<uint8_t>(mServo[i]->getMode());
-                mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.state[i] = static_cast<uint8_t>(mServo[i]->getState());
-                mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.setpoint[i] = static_cast<float>(mServo[i]->getRequestedPosition());
-                mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.position[i] = static_cast<float>(mServo[i]->getCurrentPosition());
-                PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
-            }
-            break;
-        }
-        default:
-            break;
-        }
     }
 
     if (mMonitorIndex >= 0 && mMonitorIndex < SERVO_NUMS)
@@ -275,14 +233,72 @@ void DeviceController::onDataReceived()
                 mDataFrameMap[mCurrentComamnd].data.jointStatus.index = index;
                 break;
             }
+            case CMD_SET_GET_MULTI_DOF_STATUS:
+            {
+                for (int i = 0; i < SERVO_NUMS; i++)
+                {
+                    mServo[i]->setMode((ServoMode)mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.mode[i]);
+                    mServo[i]->setState((ServoState)mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.state[i]);
+                    mServo[i]->requestPosition(mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.setpoint[i]);
+                }
+                break;
+            }
             default:
                 break;
             }
+
+            updateResponseFrameData();
         }
         else
         {
             println("Unknown command %d", mRxDataFrame.command);
         }
+    }
+}
+
+void DeviceController::updateResponseFrameData()
+{
+    switch (mCurrentComamnd)
+    {
+    case CMD_SET_JOINT_SETTING:
+    {
+        uint8_t index = mDataFrameMap[mCurrentComamnd].data.jointSetting.index;
+        if (index >= 0 && index < SERVO_NUMS)
+        {
+            mDataFrameMap[mCurrentComamnd].data.jointSetting.gearBox = mServo[index]->getGearBox();
+            mDataFrameMap[mCurrentComamnd].data.jointSetting.positionLimit = mServo[index]->getPositionLimit();
+            mDataFrameMap[mCurrentComamnd].data.jointSetting.pidParams = mServo[index]->getPidParams();
+            PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
+        }
+        break;
+    }
+    case CMD_GET_JOINT_STATUS:
+    {
+        uint8_t index = mDataFrameMap[mCurrentComamnd].data.jointStatus.index;
+        if (index >= 0 && index < SERVO_NUMS)
+        {
+            mDataFrameMap[mCurrentComamnd].data.jointStatus.mode = static_cast<uint8_t>(mServo[index]->getMode());
+            mDataFrameMap[mCurrentComamnd].data.jointStatus.state = static_cast<uint8_t>(mServo[index]->getState());
+            mDataFrameMap[mCurrentComamnd].data.jointStatus.setpoint = static_cast<float>(mServo[index]->getRequestedPosition());
+            mDataFrameMap[mCurrentComamnd].data.jointStatus.position = static_cast<float>(mServo[index]->getCurrentPosition());
+            PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
+        }
+        break;
+    }
+    case CMD_SET_GET_MULTI_DOF_STATUS:
+    {
+        for (int i = 0; i < SERVO_NUMS; i++)
+        {
+            mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.mode[i] = static_cast<uint8_t>(mServo[i]->getMode());
+            mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.state[i] = static_cast<uint8_t>(mServo[i]->getState());
+            mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.setpoint[i] = static_cast<float>(mServo[i]->getRequestedPosition());
+            mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.position[i] = static_cast<float>(mServo[i]->getCurrentPosition());
+            PacketPacker::update(mDataFrameMap[mCurrentComamnd]);
+        }
+        break;
+    }
+    default:
+        break;
     }
 }
 

@@ -53,6 +53,10 @@ void PidController::reset()
 void PidController::tune(PidParams params)
 {
     mPidParams = params;
+    mBoostedLowInput = params.boostedInput * mLowLimit;
+    mBoostedHighInput = params.boostedInput * mHighLimit;
+    mBoostedLowOutput = params.boostedOutput * mLowLimit;
+    mBoostedHighOutput = params.boostedOutput * mHighLimit;
 }
 
 void PidController::run()
@@ -77,12 +81,30 @@ void PidController::run()
         mPrevInput = *mInputPtr;
     }
 
-    if (*mOutputPtr < mLowLimit)
+    if (*mOutputPtr >= mBoostedLowInput && *mOutputPtr <= mBoostedHighInput)
     {
-        *mOutputPtr = mLowLimit;
+        *mOutputPtr = map(*mOutputPtr, mBoostedLowInput, mBoostedHighInput, mBoostedLowOutput, mBoostedHighOutput);
     }
-    if (*mOutputPtr > mHighLimit)
+    else if (*mOutputPtr > mBoostedHighInput)
     {
-        *mOutputPtr = mHighLimit;
+        *mOutputPtr = map(*mOutputPtr, mBoostedHighInput, mHighLimit, mBoostedHighOutput, mHighLimit);
     }
+    else
+    {
+        *mOutputPtr = map(*mOutputPtr, mLowLimit, mBoostedLowInput, mLowLimit, mBoostedLowInput);
+    }
+}
+
+double PidController::map(double input, double inMin, double inMax, double outMin, double outMax)
+{
+    double result = inMax == inMin ? input : outMin + (input - inMin) * (outMax - outMin) / (inMax - inMin);
+    if (result < outMin)
+    {
+        return outMin;
+    }
+    if (result > outMax)
+    {
+        return outMax;
+    }
+    return result;
 }

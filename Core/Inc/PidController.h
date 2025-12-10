@@ -1,5 +1,4 @@
-#ifndef INC_PIDCONTROLLER_H_
-#define INC_PIDCONTROLLER_H_
+#pragma once
 
 #include "SpiTransferType.h"
 
@@ -10,6 +9,10 @@ private:
     PidParams mPidParams;
     double mLowLimit;
     double mHighLimit;
+    double mBoostedLowInput;
+    double mBoostedLowOutput;
+    double mBoostedHighInput;
+    double mBoostedHighOutput;
 
     double *mInputPtr;
     double *mOutputPtr;
@@ -25,8 +28,7 @@ public:
     void reset();
     void tune(PidParams params);
     void run();
+
+private:
+    double map(double input, double inMin, double inMax, double outMin, double outMax);
 };
-
-
-
-#endif /* INC_PIDCONTROLLER_H_ */

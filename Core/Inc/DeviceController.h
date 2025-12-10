@@ -34,6 +34,7 @@ public:
     void resetSpiTransfer();
     void onDataReceived();
     void onDataError();
+    void updateResponseFrameData();
     void run();
 
     void tune(int index, PidParams params);

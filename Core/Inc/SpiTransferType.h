@@ -12,6 +12,10 @@ typedef struct
     double kp;
     double ki;
     double kd;
+
+    // Increase(output>input)/decrease(output<input) the gain for small output signals. input and output in range [0.0, 1.0]
+    double boostedInput;
+    double boostedOutput;
 } PidParams;
 
 typedef struct
@@ -76,7 +80,7 @@ typedef union
     MultiDOFStatusMessage_t multiDOFStatus;
 } PackedData;
 
-#pragma pack(push,1)
+#pragma pack(push, 1)
 typedef struct
 {
     uint16_t magicNumber;
@@ -89,4 +93,4 @@ typedef struct
 static_assert(sizeof(float) == 4, "float size is not 4 bytes");
 static_assert(sizeof(JointSettingMessage_t) <= SPI_DATA_SIZE, "JointSettingMessage_t size exceeds SPI_DATA_SIZE");
 static_assert(sizeof(JointStatusMessage_t) <= SPI_DATA_SIZE, "JointStatusMessage_t size exceeds SPI_DATA_SIZE");
-static_assert(sizeof(MultiDOFStatusMessage_t) <= SPI_DATA_SIZE, "MultiDOFPositionMessage_t size exceeds SPI_DATA_SIZE");
+static_assert(sizeof(MultiDOFStatusMessage_t) <= SPI_DATA_SIZE, "MultiDOFStatusMessage_t size exceeds SPI_DATA_SIZE");
