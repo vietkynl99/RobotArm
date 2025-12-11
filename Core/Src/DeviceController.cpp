@@ -13,7 +13,7 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
     mCmdTimeTick = 0;
     mPreTxFramePtr = nullptr;
 
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, GearBox{64 * 4, 13}, PositionLimit{-180, 180, 0}, PidParams{1000, 0, 0, 0, 0});
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, GearBox{64 * 4, 13}, PositionLimit{-180, 180, 0}, PidParams{2000, 0, 0, 0, 0});
     mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0, 0, 0});
     mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0, 0, 0});
     mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0, 0, 0});
@@ -42,10 +42,10 @@ void DeviceController::run()
     if (mMonitorIndex >= 0 && mMonitorIndex < SERVO_NUMS)
     {
         static uint32_t preTimeTick = 0, timeTick = 0;
-        static double prePosition = 0, position = 0;
-        static double speed = 0;
+        static float prePosition = 0, position = 0;
+        static float speed = 0;
 
-        double currentPositon = mServo[mMonitorIndex]->getCurrentPosition();
+        float currentPositon = mServo[mMonitorIndex]->getCurrentPosition();
 
         if (HAL_GetTick() - preTimeTick > 1000)
         {
@@ -156,7 +156,7 @@ void DeviceController::disableServos()
         disableServo(i);
     }
 }
-void DeviceController::reset(int index, double position)
+void DeviceController::reset(int index, float position)
 {
     if (index >= 0 && index < SERVO_NUMS)
     {

@@ -27,11 +27,11 @@ using namespace std;
 class Servo
 {
 private:
-    double mSetpoint;
-    double mOutput;
-    double mError;
+    float mSetpoint;
+    float mOutput;
+    float mError;
 #if SERVO_ENABLE_ERR_DETECTION
-    double mPrevError;
+    float mPrevError;
 #endif
 
     GPIO_TypeDef *mE1GPIO;
@@ -39,9 +39,9 @@ private:
     uint16_t mE1Pin;
     uint16_t mE2Pin;
     int64_t mEncoderPulse;
-    double mEncoderResolution;
-    double mResolution;
-    double mSpeed;
+    float mEncoderResolution;
+    float mResolution;
+    float mSpeed;
     GearBox mGearBox;
     PositionLimit mPositionLimit;
     PidParams mPidParams;
@@ -79,17 +79,17 @@ public:
     void setPositionLimit(PositionLimit positionLimit);
     void tune(PidParams params);
     void run();
-    void reset(double position = 0);
+    void reset(float position = 0);
     bool zeroDetect();
-    bool requestPosition(double postion);
-    bool requestSpeed(double speed);
+    bool requestPosition(float postion);
+    bool requestSpeed(float speed);
 
     uint16_t getE1Pin();
     uint16_t getE2Pin();
     int getEncoderPluse();
-    double getRequestedPosition();
-    double getCurrentPosition();
-    double getControlValue();
+    float getRequestedPosition();
+    float getCurrentPosition();
+    float getControlValue();
 
     void setOutput(int value);
     void printData();

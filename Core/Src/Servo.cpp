@@ -180,7 +180,7 @@ void Servo::run()
     setOutput(mOutput);
 }
 
-void Servo::reset(double position)
+void Servo::reset(float position)
 {
     mEncoderPulse = position / mEncoderResolution;
     mSetpoint = position;
@@ -248,7 +248,7 @@ void Servo::setOutput(int value)
 }
 
 // Unit: degree
-bool Servo::requestPosition(double postion)
+bool Servo::requestPosition(float postion)
 {
     if (mState != SERVO_STATE_RUNNING)
     {
@@ -270,7 +270,7 @@ bool Servo::requestPosition(double postion)
 }
 
 // Unit: rpm
-bool Servo::requestSpeed(double rpm)
+bool Servo::requestSpeed(float rpm)
 {
     if (mState != SERVO_STATE_RUNNING)
     {
@@ -305,19 +305,19 @@ int Servo::getEncoderPluse()
 }
 
 // Unit: degree
-double Servo::getRequestedPosition()
+float Servo::getRequestedPosition()
 {
     return mSetpoint;
 }
 
 // Unit: degree
-double Servo::getCurrentPosition()
+float Servo::getCurrentPosition()
 {
     return mEncoderPulse * mEncoderResolution;
 }
 
 // Range: [-100; 100]
-double Servo::getControlValue()
+float Servo::getControlValue()
 {
     return 100 * mOutput / SERVO_PWM_RESOLUTION;
 }

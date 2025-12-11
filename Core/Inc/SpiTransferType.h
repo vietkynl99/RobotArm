@@ -9,13 +9,13 @@
 // Private Data Structures
 typedef struct
 {
-    double kp;
-    double ki;
-    double kd;
+    float kp;
+    float ki;
+    float kd;
 
     // Increase(output>input)/decrease(output<input) the gain for small output signals. input and output in range [0.0, 1.0]
-    double boostedInput;
-    double boostedOutput;
+    float boostedInput;
+    float boostedOutput;
 } PidParams;
 
 typedef struct

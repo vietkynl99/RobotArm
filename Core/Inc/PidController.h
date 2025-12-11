@@ -5,24 +5,24 @@
 class PidController
 {
 private:
-    double mSampleTime;
+    float mSampleTime;
     PidParams mPidParams;
-    double mLowLimit;
-    double mHighLimit;
-    double mBoostedLowInput;
-    double mBoostedLowOutput;
-    double mBoostedHighInput;
-    double mBoostedHighOutput;
+    float mLowLimit;
+    float mHighLimit;
+    float mBoostedLowInput;
+    float mBoostedLowOutput;
+    float mBoostedHighInput;
+    float mBoostedHighOutput;
 
-    double *mInputPtr;
-    double *mOutputPtr;
+    float *mInputPtr;
+    float *mOutputPtr;
 
-    double mPrevInput;
-    double mIntegral;
+    float mPrevInput;
+    float mIntegral;
 
 public:
-    PidController(double *inputPtr, double *outputPtr, double sampleTime, PidParams params, double lowLimit, double highLimit);
-    PidController(double *inputPtr, double *outputPtr, double sampleTime, double lowLimit, double highLimit);
+    PidController(float *inputPtr, float *outputPtr, float sampleTime, PidParams params, float lowLimit, float highLimit);
+    PidController(float *inputPtr, float *outputPtr, float sampleTime, float lowLimit, float highLimit);
     ~PidController();
 
     void reset();
@@ -30,5 +30,5 @@ public:
     void run();
 
 private:
-    double map(double input, double inMin, double inMax, double outMin, double outMax);
+    float map(float input, float inMin, float inMax, float outMin, float outMax);
 };

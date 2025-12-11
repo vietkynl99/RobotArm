@@ -50,7 +50,7 @@ public:
     void enableServos();
     void disableServo(int index);
     void disableServos();
-    void reset(int index, double position = 0);
+    void reset(int index, float position = 0);
 
 private:
 };

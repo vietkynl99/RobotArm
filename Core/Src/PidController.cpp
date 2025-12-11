@@ -1,6 +1,6 @@
 #include "PidController.h"
 
-PidController::PidController(double *inputPtr, double *outputPtr, double sampleTime, PidParams params, double lowLimit, double highLimit)
+PidController::PidController(float *inputPtr, float *outputPtr, float sampleTime, PidParams params, float lowLimit, float highLimit)
 {
     mSampleTime = sampleTime;
     mPidParams = params;
@@ -16,7 +16,7 @@ PidController::PidController(double *inputPtr, double *outputPtr, double sampleT
     reset();
 }
 
-PidController::PidController(double *inputPtr, double *outputPtr, double sampleTime, double lowLimit, double highLimit)
+PidController::PidController(float *inputPtr, float *outputPtr, float sampleTime, float lowLimit, float highLimit)
 {
     mSampleTime = sampleTime;
 
@@ -95,9 +95,9 @@ void PidController::run()
     }
 }
 
-double PidController::map(double input, double inMin, double inMax, double outMin, double outMax)
+float PidController::map(float input, float inMin, float inMax, float outMin, float outMax)
 {
-    double result = inMax == inMin ? input : outMin + (input - inMin) * (outMax - outMin) / (inMax - inMin);
+    float result = inMax == inMin ? input : outMin + (input - inMin) * (outMax - outMin) / (inMax - inMin);
     if (result < outMin)
     {
         return outMin;
