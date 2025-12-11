@@ -49,7 +49,7 @@ Servo::~Servo()
 
 void Servo::onEncoderEvent()
 {
-    if (!HAL_GPIO_ReadPin(mE2GPIO, mE2Pin))
+    if (HAL_GPIO_ReadPin(mE2GPIO, mE2Pin))
     {
         mEncoderPulse++;
     }
@@ -78,6 +78,8 @@ void Servo::setState(ServoState state)
         if (mState != SERVO_STATE_RUNNING)
         {
             setOutput(0);
+            mOutput = 0;
+            mError = 0;
         }
     }
 }
