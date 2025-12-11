@@ -9,10 +9,6 @@ private:
     PidParams mPidParams;
     float mLowLimit;
     float mHighLimit;
-    float mBoostedLowInput;
-    float mBoostedLowOutput;
-    float mBoostedHighInput;
-    float mBoostedHighOutput;
 
     float *mInputPtr;
     float *mOutputPtr;

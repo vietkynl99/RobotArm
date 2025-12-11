@@ -324,7 +324,7 @@ float Servo::getControlValue()
 
 void Servo::printData()
 {
-    println("state %s, mode %s, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f, %.2f %.2f}, S%.2f, F%.2f, V%.2f",
+    println("state %s, mode %s, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f}, S%.2f, F%.2f, V%.2f",
             toString(getState()),
             toString(getMode()),
             mGearBox.ratio,
@@ -335,8 +335,6 @@ void Servo::printData()
             mPidParams.kp,
             mPidParams.ki,
             mPidParams.kd,
-            mPidParams.boostedInput,
-            mPidParams.boostedOutput,
             getRequestedPosition(),
             getCurrentPosition(),
             getControlValue());
