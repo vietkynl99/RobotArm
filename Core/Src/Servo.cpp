@@ -13,6 +13,7 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
 #if SERVO_ENABLE_ERR_DETECTION
     mTick = 0;
 #endif
+    mSpeedTickTime = 0;
     mOutputTimer = outputTimer;
     mOutputTimerCh1 = outputTimerCh1;
     mOutputTimerCh2 = outputTimerCh2;
@@ -26,11 +27,9 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
     setState(SERVO_STATE_DISABLED);
     setMode(SERVO_MODE_POSITION);
 
-    reset();
-
     HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh1);
     HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh2);
-    setOutput(0);
+    reset();
 }
 
 Servo::~Servo()
@@ -141,6 +140,14 @@ void Servo::tune(PidParams params)
 
 void Servo::run()
 {
+    // Caculate speed
+    if (HAL_GetTick() - mSpeedTickTime > SERVO_SPEED_DETECTION_INTERVAL)
+    {
+        mSpeedTickTime = HAL_GetTick();
+        mEncoderPulseCount = mEncoderPulse - mPrevEncoderPulse;
+        mPrevEncoderPulse = mEncoderPulse;
+    }
+
     if (mState != SERVO_STATE_RUNNING)
     {
         return;
@@ -183,6 +190,7 @@ void Servo::run()
 void Servo::reset(float position)
 {
     mEncoderPulse = position / mEncoderResolution;
+    mPrevEncoderPulse = mEncoderPulse;
     mSetpoint = position;
     mOutput = 0;
     mError = 0;
@@ -194,6 +202,7 @@ void Servo::reset(float position)
 
     mPidController->reset();
 
+    setOutput(0);
     setState(SERVO_STATE_DISABLED);
 }
 
@@ -235,6 +244,7 @@ const char *Servo::toString(ServoMode value)
 
 void Servo::setOutput(int value)
 {
+    mOutput = value;
     if (value > 0)
     {
         __HAL_TIM_SET_COMPARE(mOutputTimer, mOutputTimerCh1, value);
@@ -283,6 +293,7 @@ bool Servo::requestSpeed(float rpm)
         return false;
     }
     mEncoderPulse = 0;
+    mPrevEncoderPulse = 0;
     // rpm to deg/ms
     mSpeed = rpm * 0.006;
     mOriginTime = HAL_GetTick();
@@ -316,6 +327,18 @@ float Servo::getCurrentPosition()
     return mEncoderPulse * mEncoderResolution;
 }
 
+// Unit: deg/s
+float Servo::getCurrentSpeed()
+{
+    return mEncoderPulseCount * mEncoderResolution * 1000 / SERVO_SPEED_DETECTION_INTERVAL;
+}
+
+// Unit: rpm
+float Servo::getCurrentSpeedRpm()
+{
+    return mEncoderPulseCount * mEncoderResolution * 166.67f / SERVO_SPEED_DETECTION_INTERVAL;
+}
+
 // Range: [-100; 100]
 float Servo::getControlValue()
 {
@@ -324,7 +347,7 @@ float Servo::getControlValue()
 
 void Servo::printData()
 {
-    println("state %s, mode %s, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f}, S%.2f, F%.2f, V%.2f",
+    println("state %s, mode %s, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f}, S%.2f, F%.2f, V%.2f, %.2frpm",
             toString(getState()),
             toString(getMode()),
             mGearBox.ratio,
@@ -337,5 +360,6 @@ void Servo::printData()
             mPidParams.kd,
             getRequestedPosition(),
             getCurrentPosition(),
-            getControlValue());
+            getControlValue(),
+            getCurrentSpeedRpm());
 }

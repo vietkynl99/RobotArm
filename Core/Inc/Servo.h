@@ -4,10 +4,11 @@
 #include "RobotArm.h"
 #include "PidController.h"
 
-#define SERVO_SAMPLE_TIME_S         (1E-3)  // must matched with timer interrupt
-#define SERVO_PWM_RESOLUTION        (999)   // must matched with timer pwm generator
-#define SERVO_ENABLE_ERR_DETECTION  (1)     // enable the error detection
-#define SERVO_ZERO_DETECTION_SPEED  (10)    // [rpm] enable the error detection
+#define SERVO_SAMPLE_TIME_S             (1E-3)  // must matched with timer interrupt
+#define SERVO_PWM_RESOLUTION            (999)   // must matched with timer pwm generator
+#define SERVO_ENABLE_ERR_DETECTION      (1)     // enable the error detection
+#define SERVO_ZERO_DETECTION_SPEED      (1)     // [rpm] enable the error detection
+#define SERVO_SPEED_DETECTION_INTERVAL  (500)   // [ms] time to calculate speed
 
 enum ServoState
 {
@@ -38,7 +39,9 @@ private:
     GPIO_TypeDef *mE2GPIO;
     uint16_t mE1Pin;
     uint16_t mE2Pin;
-    int64_t mEncoderPulse;
+    int32_t mPrevEncoderPulse;
+    int32_t mEncoderPulse;
+    int32_t mEncoderPulseCount;
     float mEncoderResolution;
     float mResolution;
     float mSpeed;
@@ -57,6 +60,7 @@ private:
     uint8_t mTick;
     uint8_t mInvalidCount;
 #endif
+    uint32_t mSpeedTickTime;
 
 public:
     Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2,
@@ -89,6 +93,8 @@ public:
     int getEncoderPluse();
     float getRequestedPosition();
     float getCurrentPosition();
+    float getCurrentSpeed();
+    float getCurrentSpeedRpm();
     float getControlValue();
 
     void setOutput(int value);
