@@ -57,8 +57,6 @@ TIM_HandleTypeDef htim4;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-#define ADC_TOLERANCE (20) // 0.5% of max value (4096)
-
 #define UART_BUFFER_SIZE (64)
 
 uint8_t uartRxData;
@@ -135,7 +133,7 @@ int main(void)
   HAL_UART_Receive_IT(&huart1, &uartRxData, 1);
 
   // cpp code
-  setup(&htim1, &htim2, &htim3, &hspi1);
+  setup(&htim1, &htim2, &htim3, &hspi1, &hadc1);
 
   // Timer interrupt
   HAL_TIM_Base_Start_IT(&htim4);
@@ -147,23 +145,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    static uint32_t timeTick = 0;
-
-    // if (HAL_GetTick() > timeTick)
-    // {
-    //   timeTick = HAL_GetTick() + 10;
-
-    //   HAL_ADC_Start(&hadc1);
-    //   HAL_ADC_PollForConversion(&hadc1, 100);
-    //   int value = HAL_ADC_GetValue(&hadc1);
-    //   HAL_ADC_Stop(&hadc1);
-
-    //   if (abs(value - 440) < ADC_TOLERANCE)
-    //   {
-    //     onZeroDetected(0);
-    //   }
-    //   // println("ADC: %d", value);
-    // }
   }
   /* USER CODE END 3 */
 }

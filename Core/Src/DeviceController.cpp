@@ -5,16 +5,17 @@
 static const GearBox GearBox_Motor370_12VDC_72rpm{64, 13};
 static const GearBox GearBox_Motor_12VDC_80rpm{98.775, 1};
 
-DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
+DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi, ADC_HandleTypeDef *mhadc)
 {
     mHspi = hspi;
+    mHadc = mhadc;
     mMonitorIndex = 1;
     mCurrentComamnd = CMD_NONE;
     mCmdTimeTick = 0;
     mPreTxFramePtr = nullptr;
 
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, GearBox{64 * 4, 13}, PositionLimit{-180, 180, 0}, PidParams{500, 0, 0});
-    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-180, 180, 0}, PidParams{500, 0, 0});
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, GearBox{64 * 4, 13}, PositionLimit{-360, 360, 0}, PidParams{500, 0, 0});
+    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, GearBox{64 * 4, 13}, PositionLimit{-180, 180, 0}, PidParams{500, 0, 0});
     mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
     mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
     mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
@@ -33,6 +34,13 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
 
 void DeviceController::run()
 {
+    for (int i = 0; i < SERVO_NUMS; i++)
+    {
+        mServo[i]->run();
+    }
+
+    zeroDetectHandler();
+
     // Update data frame for the current command
     if (HAL_GetTick() - mCmdTimeTick > 5)
     {
@@ -56,6 +64,30 @@ void DeviceController::run()
                     currentPositon,
                     mServo[mMonitorIndex]->getControlValue(),
                     mServo[mMonitorIndex]->getCurrentSpeedRpm());
+        }
+    }
+}
+
+void DeviceController::zeroDetectHandler()
+{
+    static uint32_t timeTick = 0;
+    static int preAdcValue = 0;
+
+    if (HAL_GetTick() - timeTick > 10)
+    {
+        timeTick = HAL_GetTick();
+        int value = getAdcValue();
+        if (abs(value - 486) < 20)
+        {
+            onZeroDetected(0);
+        }
+        if (abs(value - preAdcValue) > 20)
+        {
+            preAdcValue = value;
+            if (value < 3300)
+            {
+                println("ADC: %d", value);
+            }
         }
     }
 }
@@ -181,7 +213,7 @@ void DeviceController::onControllerInterrupt()
 {
     for (int i = 0; i < SERVO_NUMS; i++)
     {
-        mServo[i]->run();
+        mServo[i]->runInterrupt();
     }
 }
 
@@ -229,7 +261,6 @@ void DeviceController::onDataReceived()
             {
                 for (int i = 0; i < SERVO_NUMS; i++)
                 {
-                    mServo[i]->setMode((ServoMode)mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.mode[i]);
                     mServo[i]->setState((ServoState)mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.state[i]);
                     mServo[i]->requestPosition(mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.setpoint[i]);
                 }
@@ -269,7 +300,6 @@ void DeviceController::updateResponseFrameData()
         uint8_t index = mDataFrameMap[mCurrentComamnd].data.jointStatus.index;
         if (index >= 0 && index < SERVO_NUMS)
         {
-            mDataFrameMap[mCurrentComamnd].data.jointStatus.mode = static_cast<uint8_t>(mServo[index]->getMode());
             mDataFrameMap[mCurrentComamnd].data.jointStatus.state = static_cast<uint8_t>(mServo[index]->getState());
             mDataFrameMap[mCurrentComamnd].data.jointStatus.setpoint = static_cast<float>(mServo[index]->getRequestedPosition());
             mDataFrameMap[mCurrentComamnd].data.jointStatus.position = static_cast<float>(mServo[index]->getCurrentPosition());
@@ -281,7 +311,6 @@ void DeviceController::updateResponseFrameData()
     {
         for (int i = 0; i < SERVO_NUMS; i++)
         {
-            mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.mode[i] = static_cast<uint8_t>(mServo[i]->getMode());
             mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.state[i] = static_cast<uint8_t>(mServo[i]->getState());
             mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.setpoint[i] = static_cast<float>(mServo[i]->getRequestedPosition());
             mDataFrameMap[mCurrentComamnd].data.multiDOFStatus.position[i] = static_cast<float>(mServo[i]->getCurrentPosition());
@@ -360,4 +389,13 @@ float DeviceController::getCurrentPosition(int index)
         return mServo[index]->getCurrentPosition();
     }
     return 0;
+}
+
+int DeviceController::getAdcValue()
+{
+    HAL_ADC_Start(mHadc);
+    HAL_ADC_PollForConversion(mHadc, 100);
+    int value = HAL_ADC_GetValue(mHadc);
+    HAL_ADC_Stop(mHadc);
+    return value;
 }

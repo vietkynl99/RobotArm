@@ -12,6 +12,7 @@ class DeviceController
 {
 private:
     SPI_HandleTypeDef *mHspi;
+    ADC_HandleTypeDef *mHadc;
     DataFrame mRxDataFrame;
     DataFrame *mPreTxFramePtr;
     CommandType_e mCurrentComamnd;
@@ -24,7 +25,7 @@ private:
     int mMonitorIndex;
 
 public:
-    DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi);
+    DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi, ADC_HandleTypeDef *mhadc);
 
     void onEncoderEvent(uint16_t pin);
     void onZeroDetected(int index);
@@ -36,6 +37,7 @@ public:
     void onDataError();
     void updateResponseFrameData();
     void run();
+    void zeroDetectHandler();
 
     void tune(int index, PidParams params);
     void debugMotor(int index);
@@ -44,6 +46,7 @@ public:
     bool startZeroDetection(int index);
     bool requestPosition(int index, float position);
     float getCurrentPosition(int index);
+    int getAdcValue();
 
     void forceOutput(int index, int pwmValue);
     void enableServo(int index);

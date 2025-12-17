@@ -24,8 +24,9 @@ Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t o
     mPidController = new PidController(&mError, &mOutput, SERVO_SAMPLE_TIME_S, -SERVO_PWM_RESOLUTION, SERVO_PWM_RESOLUTION);
     tune(params);
 
+    mZeroDetectionState = ZERO_DETECTION_STATE_IDLE;
     setState(SERVO_STATE_DISABLED);
-    setMode(SERVO_MODE_POSITION);
+    setZeroDetectionState(ZERO_DETECTION_STATE_IDLE);
 
     HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh1);
     HAL_TIM_PWM_Start(mOutputTimer, mOutputTimerCh2);
@@ -60,13 +61,26 @@ void Servo::onEncoderEvent()
 
 void Servo::onZeroDectected()
 {
-    if (mState == SERVO_STATE_RUNNING && mMode == SERVO_MODE_SPEED)
+    if (mState != SERVO_STATE_ZERO_DETECTING)
+    {
+        return;
+    }
+    if (mZeroDetectionState == ZERO_DETECTION_STATE_FORWARD1)
+    {
+        setZeroDetectionState((ZeroDetectionState)(mZeroDetectionState + 1));
+    }
+    else if (mZeroDetectionState == ZERO_DETECTION_STATE_FORWARD2)
     {
         println("Stop zero detection");
-        setState(SERVO_STATE_RUNNING);
-        setMode(SERVO_MODE_POSITION);
         reset(mPositionLimit.zero);
+        setState(SERVO_STATE_RUNNING);
+        setZeroDetectionState(ZERO_DETECTION_STATE_IDLE);
     }
+    // else
+    // {
+    //     println("unexpected zero detected");
+    //     setState(SERVO_STATE_ERROR);
+    // }
 }
 
 void Servo::setState(ServoState state)
@@ -74,7 +88,12 @@ void Servo::setState(ServoState state)
     if (mState != state)
     {
         mState = state;
-        if (mState != SERVO_STATE_RUNNING)
+        if (state == SERVO_STATE_ERROR)
+        {
+            println("Servo enter error state");
+            printData();
+        }
+        if (mState != SERVO_STATE_RUNNING && mState != SERVO_STATE_ZERO_DETECTING)
         {
             setOutput(0);
             mOutput = 0;
@@ -83,23 +102,46 @@ void Servo::setState(ServoState state)
     }
 }
 
-void Servo::setMode(ServoMode mode)
+void Servo::setZeroDetectionState(ZeroDetectionState state)
 {
-    if (mMode != mode)
+    if (mZeroDetectionState != state)
     {
-        mMode = mode;
-        setOutput(0);
+        mZeroDetectionState = state;
+        switch (state)
+        {
+        case ZERO_DETECTION_STATE_IDLE:
+        {
+            break;
+        }
+        case ZERO_DETECTION_STATE_BACKWARD1:
+        {
+            requestSpeed(-SERVO_ZERO_DETECTION_SPEED, 2000);
+            break;
+        }
+        case ZERO_DETECTION_STATE_FORWARD1:
+        {
+            requestSpeed(SERVO_ZERO_DETECTION_SPEED);
+            break;
+        }
+        case ZERO_DETECTION_STATE_BACKWARD2:
+        {
+            requestSpeed(-SERVO_ZERO_DETECTION_SPEED, 1000);
+            break;
+        }
+        case ZERO_DETECTION_STATE_FORWARD2:
+        {
+            requestSpeed(1);
+            break;
+        }
+        default:
+            break;
+        }
     }
 }
 
 ServoState Servo::getState()
 {
     return mState;
-}
-
-ServoMode Servo::getMode()
-{
-    return mMode;
 }
 
 GearBox Servo::getGearBox()
@@ -138,25 +180,13 @@ void Servo::tune(PidParams params)
     mPidController->tune(params);
 }
 
-void Servo::run()
+void Servo::runInterrupt()
 {
-    // Caculate speed
-    if (HAL_GetTick() - mSpeedTickTime > SERVO_SPEED_DETECTION_INTERVAL)
-    {
-        mSpeedTickTime = HAL_GetTick();
-        mEncoderPulseCount = mEncoderPulse - mPrevEncoderPulse;
-        mPrevEncoderPulse = mEncoderPulse;
-    }
-
-    if (mState != SERVO_STATE_RUNNING)
+    if (mState != SERVO_STATE_ZERO_DETECTING && mState != SERVO_STATE_RUNNING)
     {
         return;
     }
 
-    if (mMode == SERVO_MODE_SPEED)
-    {
-        mSetpoint = mSpeed * (HAL_GetTick() - mOriginTime);
-    }
     mError = mSetpoint - getCurrentPosition();
 
 #if SERVO_ENABLE_ERR_DETECTION
@@ -187,6 +217,39 @@ void Servo::run()
     setOutput(mOutput);
 }
 
+void Servo::run()
+{
+    if (mState == SERVO_STATE_ZERO_DETECTING)
+    {
+        if (mTimeoutTime > 0 && HAL_GetTick() - mOriginTimeTick > (uint32_t)mTimeoutTime)
+        {
+            // timeout
+            if (mZeroDetectionState == ZERO_DETECTION_STATE_BACKWARD1 || mZeroDetectionState == ZERO_DETECTION_STATE_BACKWARD2)
+            {
+                setZeroDetectionState((ZeroDetectionState)(mZeroDetectionState + 1));
+            }
+            else
+            {
+                println("Speed request timeout???");
+                setState(SERVO_STATE_ERROR);
+                return;
+            }
+        }
+        else
+        {
+            mSetpoint = mSpeed * (HAL_GetTick() - mOriginTimeTick);
+        }
+    }
+
+    // Caculate speed
+    if (HAL_GetTick() - mSpeedTickTime > SERVO_SPEED_DETECTION_INTERVAL)
+    {
+        mSpeedTickTime = HAL_GetTick();
+        mEncoderPulseCount = mEncoderPulse - mPrevEncoderPulse;
+        mPrevEncoderPulse = mEncoderPulse;
+    }
+}
+
 void Servo::reset(float position)
 {
     mEncoderPulse = position / mEncoderResolution;
@@ -208,10 +271,18 @@ void Servo::reset(float position)
 
 bool Servo::zeroDetect()
 {
-    setState(SERVO_STATE_RUNNING);
-    setMode(SERVO_MODE_SPEED);
-    requestSpeed(SERVO_ZERO_DETECTION_SPEED);
-    return true;
+    if (mState != SERVO_STATE_ZERO_DETECTING && mZeroDetectionState == ZERO_DETECTION_STATE_IDLE)
+    {
+        println("Start zero detection");
+        setState(SERVO_STATE_ZERO_DETECTING);
+        setZeroDetectionState(ZERO_DETECTION_STATE_BACKWARD1);
+        return true;
+    }
+    else
+    {
+        println("Already in zero detection");
+        return false;
+    }
 }
 
 const char *Servo::toString(ServoState value)
@@ -222,21 +293,10 @@ const char *Servo::toString(ServoState value)
         return "ERROR";
     case SERVO_STATE_DISABLED:
         return "DISABLED";
+    case SERVO_STATE_ZERO_DETECTING:
+        return "ZERO_DETECTING";
     case SERVO_STATE_RUNNING:
         return "RUNNING";
-    default:
-        return "UNKNOWN";
-    }
-}
-
-const char *Servo::toString(ServoMode value)
-{
-    switch (value)
-    {
-    case SERVO_MODE_SPEED:
-        return "SPEED";
-    case SERVO_MODE_POSITION:
-        return "POSITION";
     default:
         return "UNKNOWN";
     }
@@ -265,11 +325,6 @@ bool Servo::requestPosition(float postion)
         println("Servo is not running");
         return false;
     }
-    if (mMode != SERVO_MODE_POSITION)
-    {
-        println("Is not position mode");
-        return false;
-    }
     if (postion > mPositionLimit.max || postion < mPositionLimit.min)
     {
         println("%.2f out of range [%.2f; %.2f]", postion, mPositionLimit.min, mPositionLimit.max);
@@ -280,23 +335,18 @@ bool Servo::requestPosition(float postion)
 }
 
 // Unit: rpm
-bool Servo::requestSpeed(float rpm)
+bool Servo::requestSpeed(float rpm, int timeout)
 {
-    if (mState != SERVO_STATE_RUNNING)
+    if (mState != SERVO_STATE_ZERO_DETECTING)
     {
-        println("Servo is not running");
-        return false;
-    }
-    if (mMode != SERVO_MODE_SPEED)
-    {
-        println("Is not speed mode");
+        println("Servo is not in zero detecting state");
         return false;
     }
     mEncoderPulse = 0;
     mPrevEncoderPulse = 0;
-    // rpm to deg/ms
-    mSpeed = rpm * 0.006;
-    mOriginTime = HAL_GetTick();
+    mSpeed = rpm * 0.006; // rpm to deg/ms
+    mOriginTimeTick = HAL_GetTick();
+    mTimeoutTime = timeout;
     return true;
 }
 
@@ -347,9 +397,9 @@ float Servo::getControlValue()
 
 void Servo::printData()
 {
-    println("state %s, mode %s, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f}, S%.2f, F%.2f, V%.2f, %.2frpm",
+    println("state %s, zeroDetectState %d, GearBox{%.2f, %d}, Limit{%.2f, %.2f, %.2f}, PID{%.2f, %.2f, %.2f}, S%.2f, F%.2f, V%.2f, %.2frpm",
             toString(getState()),
-            toString(getMode()),
+            mZeroDetectionState,
             mGearBox.ratio,
             mGearBox.encoderResolution,
             mPositionLimit.min,

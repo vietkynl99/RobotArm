@@ -49,14 +49,6 @@ void onGpioExt(uint16_t pin)
     }
 }
 
-void onZeroDetected(int index)
-{
-    if (mController)
-    {
-        mController->onZeroDetected(index);
-    }
-}
-
 void onControllerInterrupt()
 {
     if (mController)
@@ -120,7 +112,7 @@ bool onCommandForceOutput(string params)
     int index = 0, pwm = 0;
     if (!params.empty() && sscanf(params.c_str(), "%d %d", &index, &pwm) == 2 &&
         index >= 0 && index < SERVO_NUMS &&
-        pwm >= 0 && pwm <= SERVO_PWM_RESOLUTION)
+        pwm >= -SERVO_PWM_RESOLUTION && pwm <= SERVO_PWM_RESOLUTION)
     {
         mController->forceOutput(index, pwm);
         return true;
@@ -190,7 +182,13 @@ bool onCommandMonitor(string params)
     return false;
 }
 
-void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
+bool onCommandAdc(string params)
+{
+    println("ADC: %d", mController->getAdcValue());
+    return true;
+}
+
+void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi, ADC_HandleTypeDef *mhadc)
 {
     println("");
     println("*** Robot Arm - ver " GIT_VERSION " ***");
@@ -205,8 +203,9 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
     CommandLine::install("forceOutput", onCommandForceOutput, "forceOutput [index] [pwm]\t: Force servo to run with pwm value");
     CommandLine::install("debug", onCommandDebug, "debug [index]\t: debug servo at index");
     CommandLine::install("monitor", onCommandMonitor, "monitor -1\t: stop monitor\r\nmonitor [index]\t: monitor servo position at index");
+    CommandLine::install("adc", onCommandAdc, "adc \t: get ADC value");
 
-    mController = new DeviceController(htim1, htim2, htim3, hspi);
+    mController = new DeviceController(htim1, htim2, htim3, hspi, mhadc);
 }
 
 void loop()
