@@ -9,7 +9,7 @@ DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *
 {
     mHspi = hspi;
     mHadc = mhadc;
-    mMonitorIndex = 1;
+    mMonitorIndex = -1;
     mCurrentComamnd = CMD_NONE;
     mCmdTimeTick = 0;
     mPreTxFramePtr = nullptr;
@@ -81,7 +81,11 @@ void DeviceController::zeroDetectHandler()
         {
             onZeroDetected(0);
         }
-        if (abs(value - preAdcValue) > 20)
+        else if (abs(value - 1035) < 20)
+        {
+            onZeroDetected(1);
+        }
+        if (abs(value - preAdcValue) > 5)
         {
             preAdcValue = value;
             if (value < 3300)
