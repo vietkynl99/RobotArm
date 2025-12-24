@@ -2,12 +2,16 @@
 #include "RobotArm.h"
 #include "CommandLine.h"
 #include "DeviceController.h"
+#include "SoftI2c.h"
+#include "MCP23017.h"
 
 #include <string>
 #include <cstring>
 
 using namespace std;
 
+SoftI2c *mI2c;
+MCP23017 *mIOExpander;
 DeviceController *mController;
 
 int parseIndex(string params, int min = 0, int max = SERVO_NUMS - 1)
@@ -204,6 +208,26 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
     CommandLine::install("debug", onCommandDebug, "debug [index]\t: debug servo at index");
     CommandLine::install("monitor", onCommandMonitor, "monitor -1\t: stop monitor\r\nmonitor [index]\t: monitor servo position at index");
     CommandLine::install("adc", onCommandAdc, "adc \t: get ADC value");
+
+    mI2c = new SoftI2c(SOFT_I2C_SDA_GPIO_Port, SOFT_I2C_SDA_Pin, SOFT_I2C_SCL_GPIO_Port, SOFT_I2C_SCL_Pin);
+    if (!mI2c->begin())
+    {
+        println("Failed to initialize I2C");
+    }
+    else
+    {
+        mIOExpander = new MCP23017(mI2c);
+        for (int i = 0; i < 5; i++)
+        {
+            if (mIOExpander->init())
+            {
+                println("IO expander initialized");
+                break;
+            }
+            println("Failed to initialize IO expander. Retrying...");
+            HAL_Delay(100);
+        }
+    }
 
     mController = new DeviceController(htim1, htim2, htim3, hspi, mhadc);
 }

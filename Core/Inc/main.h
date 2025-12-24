@@ -60,8 +60,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define EP_CTRL_Pin GPIO_PIN_13
-#define EP_CTRL_GPIO_Port GPIOC
+#define SOFT_I2C_SDA_Pin GPIO_PIN_13
+#define SOFT_I2C_SDA_GPIO_Port GPIOC
 #define M5_E1_Pin GPIO_PIN_14
 #define M5_E1_GPIO_Port GPIOC
 #define M5_E1_EXTI_IRQn EXTI15_10_IRQn
@@ -92,6 +92,8 @@ void Error_Handler(void);
 #define M1_E1_Pin GPIO_PIN_8
 #define M1_E1_GPIO_Port GPIOB
 #define M1_E1_EXTI_IRQn EXTI9_5_IRQn
+#define SOFT_I2C_SCL_Pin GPIO_PIN_9
+#define SOFT_I2C_SCL_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
