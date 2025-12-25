@@ -3,6 +3,8 @@
 
 #include <string>
 #include "main.h"
+#include "Encoder.h"
+#include "MCP23017.h"
 #include "PacketPacker.h"
 #include "Servo.h"
 
@@ -12,7 +14,6 @@ class DeviceController
 {
 private:
     SPI_HandleTypeDef *mHspi;
-    ADC_HandleTypeDef *mHadc;
     DataFrame mRxDataFrame;
     DataFrame *mPreTxFramePtr;
     CommandType_e mCurrentComamnd;
@@ -22,14 +23,16 @@ private:
     DataFrame mDataFrameMap[CMD_MAX];
 
     Servo *mServo[SERVO_NUMS];
+    Encoder *mEncoder[SERVO_NUMS];
+    MCP23017_Pin mZeroDetectionPin[SERVO_NUMS];
     int mMonitorIndex;
 
 public:
-    DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi, ADC_HandleTypeDef *mhadc);
+    DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi);
 
-    void onEncoderEvent(uint16_t pin);
-    void onZeroDetected(int index);
-    void onControllerInterrupt();
+    void onGpioExt(uint16_t pin);
+    void onExpanderGpioExt(MCP23017_Pin pin);
+    void onTimerInterrupt();
 
     void startSpiTransfer(DataFrame &txFrame, bool force = false);
     void resetSpiTransfer();
@@ -37,7 +40,6 @@ public:
     void onDataError();
     void updateResponseFrameData();
     void run();
-    void zeroDetectHandler();
 
     void tune(int index, PidParams params);
     void debugMotor(int index);
@@ -46,7 +48,6 @@ public:
     bool startZeroDetection(int index);
     bool requestPosition(int index, float position);
     float getCurrentPosition(int index);
-    int getAdcValue();
 
     void forceOutput(int index, int pwmValue);
     void enableServo(int index);

@@ -17,46 +17,101 @@
 #define MCP23017_GPINTENB 0x05
 #define MCP23017_INTCONA 0x08
 #define MCP23017_INTCONB 0x09
+#define MCP23017_DEFVALA 0x06
+#define MCP23017_DEFVALB 0x07
+#define MCP23017_INTFA 0x0E
+#define MCP23017_INTFB 0x0F
+#define MCP23017_INTCAPA 0x10
+#define MCP23017_INTCAPB 0x11
+#define MCP23017_IOCON 0x0A
 
-MCP23017::MCP23017(SoftI2c *i2c, uint8_t address)
-    : mI2c(i2c), mAddress(address)
+MCP23017::MCP23017(SoftI2c *i2c, uint8_t address, void (*extCallback)(MCP23017_Pin))
+    : mI2c(i2c), mAddress(address), mInterruptFlag(true), mOnGpioExt(extCallback), mErrorFlag(false), mGpioA(0)
 {
 }
 
 bool MCP23017::init()
 {
-    if (!writeReg(MCP23017_IODIRA, 0x00)) // A = output
-    {
-        return false;
-    }
-    if (!writeReg(MCP23017_IODIRB, 0xFF)) // B = input
-    {
-        return false;
-    }
-
-    if (!writeReg(MCP23017_GPPUB, 0xFF)) // pull-up input B
+    if (!writeReg(MCP23017_IODIRA, 0xFF) ||   // A = input
+        !writeReg(MCP23017_IODIRB, 0xFF) ||   // B = input
+        !writeReg(MCP23017_GPPUA, 0xFF) ||    // Pull-up enabled
+        !writeReg(MCP23017_GPINTENA, 0xFF) || // Enable interrupt on change
+        !writeReg(MCP23017_INTCONA, 0x00))    // Compare to previous value
     {
         return false;
     }
 
-    if (!writeReg(MCP23017_OLATA, 0x00)) // output A = LOW
-    {
-        return false;
-    }
-
-    // Configure interrupt on change for port B
-    if (!writeReg(MCP23017_GPINTENB, 0xFF)) // enable interrupt
-    {
-        return false;
-    }
-    if (!writeReg(MCP23017_INTCONB, 0x00)) // any change
-    {
-        return false;
-    }
     return true;
 }
 
 bool MCP23017::writeReg(uint8_t reg, uint8_t value)
 {
-    return mI2c->writeReg(mAddress, reg, value);
+    if (mI2c->writeReg(mAddress, reg, value))
+    {
+        return true;
+    }
+    else
+    {
+        println("writeReg 0x%02X failed", reg);
+        mErrorFlag = true;
+        return false;
+    }
+}
+
+bool MCP23017::readReg(uint8_t reg, uint8_t &out)
+{
+    if (mI2c->readReg(mAddress, reg, out))
+    {
+        return true;
+    }
+    else
+    {
+        println("readReg 0x%02X failed", reg);
+        mErrorFlag = true;
+        return false;
+    }
+}
+
+void MCP23017::run()
+{
+    if (mErrorFlag)
+    {
+        return;
+    }
+    if (mInterruptFlag /* || HAL_GPIO_ReadPin(IO_EXPANDER_INTA_GPIO_Port, IO_EXPANDER_INTA_Pin) == GPIO_PIN_RESET */)
+    {
+        uint8_t gpioA;
+        if (readReg(MCP23017_INTCAPA, gpioA))
+        {
+            mInterruptFlag = false;
+            if (mGpioA != gpioA)
+            {
+                println("MCP23017 A: 0x%02X -> 0x%02X", mGpioA, gpioA);
+                if (mOnGpioExt)
+                {
+                    for (uint8_t i = 0; i < 8; i++)
+                    {
+                        bool oldBit = mGpioA & (1 << i);
+                        bool newBit = gpioA & (1 << i);
+                        // Falling edge
+                        if (oldBit != newBit && !newBit)
+                        {
+                            mOnGpioExt((MCP23017_Pin)i);
+                        }
+                    }
+                }
+                mGpioA = gpioA;
+            }
+        }
+    }
+}
+
+void MCP23017::interrupt()
+{
+    mInterruptFlag = true;
+}
+
+bool MCP23017::isRunning()
+{
+    return !mErrorFlag;
 }

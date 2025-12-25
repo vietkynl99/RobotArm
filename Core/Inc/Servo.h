@@ -1,14 +1,15 @@
 #ifndef INC_SERVO_H_
 #define INC_SERVO_H_
 
+#include "MCP23017.h"
 #include "RobotArm.h"
 #include "PidController.h"
 
-#define SERVO_SAMPLE_TIME_S             (1E-3)  // must matched with timer interrupt
-#define SERVO_PWM_RESOLUTION            (999)   // must matched with timer pwm generator
-#define SERVO_ENABLE_ERR_DETECTION      (1)     // enable the error detection
-#define SERVO_ZERO_DETECTION_SPEED      (5)     // [rpm] enable the error detection
-#define SERVO_SPEED_DETECTION_INTERVAL  (500)   // [ms] time to calculate speed
+#define SERVO_SAMPLE_TIME_S (1E-3)           // must matched with timer interrupt
+#define SERVO_PWM_RESOLUTION (999)           // must matched with timer pwm generator
+#define SERVO_ENABLE_ERR_DETECTION (1)       // enable the error detection
+#define SERVO_ZERO_DETECTION_SPEED (5)       // [rpm] enable the error detection
+#define SERVO_SPEED_DETECTION_INTERVAL (500) // [ms] time to calculate speed
 
 enum ZeroDetectionState
 {
@@ -27,6 +28,13 @@ enum ServoState
     SERVO_STATE_RUNNING
 };
 
+enum ServoEvent
+{
+    SERVO_EVENT_ENCODER_INC,
+    SERVO_EVENT_ENCODER_DEC,
+    SERVO_EVENT_ZERO_DETECTED
+};
+
 using namespace std;
 
 class Servo
@@ -39,10 +47,6 @@ private:
     float mPrevError;
 #endif
 
-    GPIO_TypeDef *mE1GPIO;
-    GPIO_TypeDef *mE2GPIO;
-    uint16_t mE1Pin;
-    uint16_t mE2Pin;
     int32_t mPrevEncoderPulse;
     int32_t mEncoderPulse;
     int32_t mEncoderPulseCount;
@@ -69,12 +73,10 @@ private:
 
 public:
     Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2,
-            GPIO_TypeDef *e1GPIO, uint16_t e1Pin, GPIO_TypeDef *e2GPIO, uint16_t e2Pin,
-            GearBox gearBox, PositionLimit positionLimit, PidParams params);
+          GearBox gearBox, PositionLimit positionLimit, PidParams params);
     ~Servo();
 
-    void onEncoderEvent();
-    void onZeroDectected();
+    void onEvent(ServoEvent event);
 
     void setState(ServoState state);
     void setZeroDetectionState(ZeroDetectionState state);
@@ -86,15 +88,13 @@ public:
     void setGearBox(GearBox gearBox);
     void setPositionLimit(PositionLimit positionLimit);
     void tune(PidParams params);
-    void runInterrupt();
+    void timerInterrupt();
     void run();
     void reset(float position = 0);
     bool zeroDetect();
     bool requestPosition(float postion);
     bool requestSpeed(float speed, int timeout = -1);
 
-    uint16_t getE1Pin();
-    uint16_t getE2Pin();
     int getEncoderPluse();
     float getRequestedPosition();
     float getCurrentPosition();
@@ -106,6 +106,7 @@ public:
     void printData();
 
 private:
-    const char* toString(ServoState value);
+    void onZeroDectected();
+    const char *toString(ServoState value);
 };
 #endif /* INC_SERVO_H_ */

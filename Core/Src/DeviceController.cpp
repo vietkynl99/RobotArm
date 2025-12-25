@@ -5,21 +5,34 @@
 static const GearBox GearBox_Motor370_12VDC_72rpm{64, 13};
 static const GearBox GearBox_Motor_12VDC_80rpm{98.775, 1};
 
-DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi, ADC_HandleTypeDef *mhadc)
+DeviceController::DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
     mHspi = hspi;
-    mHadc = mhadc;
     mMonitorIndex = -1;
     mCurrentComamnd = CMD_NONE;
     mCmdTimeTick = 0;
     mPreTxFramePtr = nullptr;
 
-    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin, GearBox{64 * 4, 13}, PositionLimit{-360, 360, 0}, PidParams{500, 0, 0});
-    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin, GearBox{64 * 4, 13}, PositionLimit{-180, 180, 0}, PidParams{500, 0, 0});
-    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
-    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
-    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
-    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, M6_E1_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[0] = new Servo(htim1, TIM_CHANNEL_1, TIM_CHANNEL_2, GearBox{64 * 4, 13}, PositionLimit{-360, 360, 0}, PidParams{500, 0, 0});
+    mServo[1] = new Servo(htim1, TIM_CHANNEL_3, TIM_CHANNEL_4, GearBox{64 * 4, 13}, PositionLimit{-180, 180, 0}, PidParams{500, 0, 0});
+    mServo[2] = new Servo(htim2, TIM_CHANNEL_1, TIM_CHANNEL_2, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[3] = new Servo(htim2, TIM_CHANNEL_3, TIM_CHANNEL_4, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[4] = new Servo(htim3, TIM_CHANNEL_1, TIM_CHANNEL_2, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+    mServo[5] = new Servo(htim3, TIM_CHANNEL_3, TIM_CHANNEL_4, GearBox_Motor370_12VDC_72rpm, PositionLimit{-160, 170, 180}, PidParams{20, 0, 0});
+
+    mEncoder[0] = new Encoder(M1_E1_GPIO_Port, M1_E1_Pin, M1_E2_GPIO_Port, M1_E2_Pin);
+    mEncoder[1] = new Encoder(M2_E1_GPIO_Port, M2_E1_Pin, M2_E2_GPIO_Port, M2_E2_Pin);
+    mEncoder[2] = new Encoder(M3_E1_GPIO_Port, M3_E1_Pin, M3_E2_GPIO_Port, M3_E2_Pin);
+    mEncoder[3] = new Encoder(M4_E1_GPIO_Port, M4_E1_Pin, M4_E2_GPIO_Port, M4_E2_Pin);
+    mEncoder[4] = new Encoder(M5_E1_GPIO_Port, M5_E1_Pin, M5_E2_GPIO_Port, M5_E2_Pin);
+    mEncoder[5] = new Encoder(M6_E1_GPIO_Port, M6_E1_Pin, M6_E2_GPIO_Port, M6_E2_Pin);
+
+    mZeroDetectionPin[0] = MCP23017_A1_Pin;
+    mZeroDetectionPin[1] = MCP23017_A0_Pin;
+    mZeroDetectionPin[2] = MCP23017_B1_Pin;
+    mZeroDetectionPin[3] = MCP23017_B2_Pin;
+    mZeroDetectionPin[4] = MCP23017_B3_Pin;
+    mZeroDetectionPin[5] = MCP23017_B4_Pin;
 
     memset(&mRxDataFrame, 0, sizeof(DataFrame));
 
@@ -38,8 +51,6 @@ void DeviceController::run()
     {
         mServo[i]->run();
     }
-
-    zeroDetectHandler();
 
     // Update data frame for the current command
     if (HAL_GetTick() - mCmdTimeTick > 5)
@@ -64,34 +75,6 @@ void DeviceController::run()
                     currentPositon,
                     mServo[mMonitorIndex]->getControlValue(),
                     mServo[mMonitorIndex]->getCurrentSpeedRpm());
-        }
-    }
-}
-
-void DeviceController::zeroDetectHandler()
-{
-    static uint32_t timeTick = 0;
-    static int preAdcValue = 0;
-
-    if (HAL_GetTick() - timeTick > 10)
-    {
-        timeTick = HAL_GetTick();
-        int value = getAdcValue();
-        if (abs(value - 486) < 20)
-        {
-            onZeroDetected(0);
-        }
-        else if (abs(value - 1035) < 20)
-        {
-            onZeroDetected(1);
-        }
-        if (abs(value - preAdcValue) > 5)
-        {
-            preAdcValue = value;
-            if (value < 3300)
-            {
-                println("ADC: %d", value);
-            }
         }
     }
 }
@@ -192,32 +175,42 @@ void DeviceController::reset(int index, float position)
     }
 }
 
-void DeviceController::onEncoderEvent(uint16_t pin)
+void DeviceController::onGpioExt(uint16_t pin)
 {
     for (int i = 0; i < SERVO_NUMS; i++)
     {
-        if (pin == mServo[i]->getE1Pin())
+        EncoderEvent encoderEvent = mEncoder[i]->onExt(pin);
+        switch (encoderEvent)
         {
-            mServo[i]->onEncoderEvent();
+        case ENCODER_EVENT_INC:
+            mServo[i]->onEvent(SERVO_EVENT_ENCODER_INC);
+            return;
+        case ENCODER_EVENT_DEC:
+            mServo[i]->onEvent(SERVO_EVENT_ENCODER_DEC);
+            return;
+        default:
             break;
         }
     }
 }
 
-void DeviceController::onZeroDetected(int index)
-{
-    // println("onZeroDetected: %d", index);
-    if (index >= 0 && index < SERVO_NUMS)
-    {
-        mServo[index]->onZeroDectected();
-    }
-}
-
-void DeviceController::onControllerInterrupt()
+void DeviceController::onExpanderGpioExt(MCP23017_Pin pin)
 {
     for (int i = 0; i < SERVO_NUMS; i++)
     {
-        mServo[i]->runInterrupt();
+        if (pin == mZeroDetectionPin[i])
+        {
+            mServo[i]->onEvent(SERVO_EVENT_ZERO_DETECTED);
+            break;
+        }
+    }
+}
+
+void DeviceController::onTimerInterrupt()
+{
+    for (int i = 0; i < SERVO_NUMS; i++)
+    {
+        mServo[i]->timerInterrupt();
     }
 }
 
@@ -393,13 +386,4 @@ float DeviceController::getCurrentPosition(int index)
         return mServo[index]->getCurrentPosition();
     }
     return 0;
-}
-
-int DeviceController::getAdcValue()
-{
-    HAL_ADC_Start(mHadc);
-    HAL_ADC_PollForConversion(mHadc, 100);
-    int value = HAL_ADC_GetValue(mHadc);
-    HAL_ADC_Stop(mHadc);
-    return value;
 }

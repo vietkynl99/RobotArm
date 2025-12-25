@@ -47,17 +47,35 @@ void onSpiDataError()
 
 void onGpioExt(uint16_t pin)
 {
-    if (mController)
+    if (pin == IO_EXPANDER_INT_Pin)
     {
-        mController->onEncoderEvent(pin);
+        if (mIOExpander)
+        {
+            mIOExpander->interrupt();
+        }
+    }
+    else
+    {
+        if (mController)
+        {
+            mController->onGpioExt(pin);
+        }
     }
 }
 
-void onControllerInterrupt()
+void onExpanderGpioExt(MCP23017_Pin pin)
 {
     if (mController)
     {
-        mController->onControllerInterrupt();
+        mController->onExpanderGpioExt(pin);
+    }
+}
+
+void onTimerInterrupt()
+{
+    if (mController)
+    {
+        mController->onTimerInterrupt();
     }
 }
 
@@ -90,6 +108,11 @@ bool onCommandPosition(string params)
 
 bool onCommandZeroDetect(string params)
 {
+    if (!mIOExpander->isRunning())
+    {
+        println("IO expander error");
+        return false;
+    }
     int index = parseIndex(params);
     if (index != -1)
     {
@@ -186,13 +209,7 @@ bool onCommandMonitor(string params)
     return false;
 }
 
-bool onCommandAdc(string params)
-{
-    println("ADC: %d", mController->getAdcValue());
-    return true;
-}
-
-void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi, ADC_HandleTypeDef *mhadc)
+void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi)
 {
     println("");
     println("*** Robot Arm - ver " GIT_VERSION " ***");
@@ -207,7 +224,6 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
     CommandLine::install("forceOutput", onCommandForceOutput, "forceOutput [index] [pwm]\t: Force servo to run with pwm value");
     CommandLine::install("debug", onCommandDebug, "debug [index]\t: debug servo at index");
     CommandLine::install("monitor", onCommandMonitor, "monitor -1\t: stop monitor\r\nmonitor [index]\t: monitor servo position at index");
-    CommandLine::install("adc", onCommandAdc, "adc \t: get ADC value");
 
     mI2c = new SoftI2c(SOFT_I2C_SDA_GPIO_Port, SOFT_I2C_SDA_Pin, SOFT_I2C_SCL_GPIO_Port, SOFT_I2C_SCL_Pin);
     if (!mI2c->begin())
@@ -216,7 +232,7 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
     }
     else
     {
-        mIOExpander = new MCP23017(mI2c);
+        mIOExpander = new MCP23017(mI2c, MCP23017_ADDRESS, onExpanderGpioExt);
         for (int i = 0; i < 5; i++)
         {
             if (mIOExpander->init())
@@ -229,10 +245,14 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
         }
     }
 
-    mController = new DeviceController(htim1, htim2, htim3, hspi, mhadc);
+    mController = new DeviceController(htim1, htim2, htim3, hspi);
 }
 
 void loop()
 {
+    if (mIOExpander)
+    {
+        mIOExpander->run();
+    }
     mController->run();
 }

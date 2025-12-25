@@ -3,13 +3,8 @@
 #include <cstdlib>
 
 Servo::Servo(TIM_HandleTypeDef *outputTimer, uint16_t outputTimerCh1, uint16_t outputTimerCh2,
-             GPIO_TypeDef *e1GPIO, uint16_t e1Pin, GPIO_TypeDef *e2GPIO, uint16_t e2Pin,
              GearBox gearBox, PositionLimit positionLimit, PidParams params)
 {
-    mE1GPIO = e1GPIO;
-    mE1Pin = e1Pin;
-    mE2GPIO = e2GPIO;
-    mE2Pin = e2Pin;
 #if SERVO_ENABLE_ERR_DETECTION
     mTick = 0;
 #endif
@@ -47,15 +42,21 @@ Servo::~Servo()
     }
 }
 
-void Servo::onEncoderEvent()
+void Servo::onEvent(ServoEvent event)
 {
-    if (HAL_GPIO_ReadPin(mE2GPIO, mE2Pin))
+    switch (event)
     {
+    case SERVO_EVENT_ENCODER_INC:
         mEncoderPulse++;
-    }
-    else
-    {
+        break;
+    case SERVO_EVENT_ENCODER_DEC:
         mEncoderPulse--;
+        break;
+    case SERVO_EVENT_ZERO_DETECTED:
+        onZeroDectected();
+        break;
+    default:
+        break;
     }
 }
 
@@ -65,6 +66,7 @@ void Servo::onZeroDectected()
     {
         return;
     }
+    println("zero dectected");
     if (mZeroDetectionState == ZERO_DETECTION_STATE_FORWARD1)
     {
         setZeroDetectionState((ZeroDetectionState)(mZeroDetectionState + 1));
@@ -180,7 +182,7 @@ void Servo::tune(PidParams params)
     mPidController->tune(params);
 }
 
-void Servo::runInterrupt()
+void Servo::timerInterrupt()
 {
     if (mState != SERVO_STATE_ZERO_DETECTING && mState != SERVO_STATE_RUNNING)
     {
@@ -348,16 +350,6 @@ bool Servo::requestSpeed(float rpm, int timeout)
     mOriginTimeTick = HAL_GetTick();
     mTimeoutTime = timeout;
     return true;
-}
-
-uint16_t Servo::getE1Pin()
-{
-    return mE1Pin;
-}
-
-uint16_t Servo::getE2Pin()
-{
-    return mE2Pin;
 }
 
 int Servo::getEncoderPluse()
