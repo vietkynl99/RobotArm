@@ -3,6 +3,8 @@
 
 #include <string>
 #include "main.h"
+#include "Encoder.h"
+#include "MCP23017.h"
 #include "PacketPacker.h"
 #include "Servo.h"
 
@@ -21,14 +23,16 @@ private:
     DataFrame mDataFrameMap[CMD_MAX];
 
     Servo *mServo[SERVO_NUMS];
+    Encoder *mEncoder[SERVO_NUMS];
+    MCP23017_Pin mZeroDetectionPin[SERVO_NUMS];
     int mMonitorIndex;
 
 public:
     DeviceController(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef *htim3, SPI_HandleTypeDef *hspi);
 
-    void onEncoderEvent(uint16_t pin);
-    void onZeroDetected(int index);
-    void onControllerInterrupt();
+    void onGpioExt(uint16_t pin);
+    void onExpanderGpioExt(MCP23017_Pin pin);
+    void onTimerInterrupt();
 
     void startSpiTransfer(DataFrame &txFrame, bool force = false);
     void resetSpiTransfer();

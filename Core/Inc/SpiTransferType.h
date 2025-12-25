@@ -52,7 +52,6 @@ typedef struct JointStatusMessage
 {
     static constexpr int CMD = CMD_GET_JOINT_STATUS;
     uint8_t index;
-    uint8_t mode;
     uint8_t state;
     float setpoint;
     float position;

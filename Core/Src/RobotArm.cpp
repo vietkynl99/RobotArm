@@ -2,12 +2,16 @@
 #include "RobotArm.h"
 #include "CommandLine.h"
 #include "DeviceController.h"
+#include "SoftI2c.h"
+#include "MCP23017.h"
 
 #include <string>
 #include <cstring>
 
 using namespace std;
 
+SoftI2c *mI2c;
+MCP23017 *mIOExpander;
 DeviceController *mController;
 
 int parseIndex(string params, int min = 0, int max = SERVO_NUMS - 1)
@@ -43,25 +47,35 @@ void onSpiDataError()
 
 void onGpioExt(uint16_t pin)
 {
-    if (mController)
+    if (pin == IO_EXPANDER_INT_Pin)
     {
-        mController->onEncoderEvent(pin);
+        if (mIOExpander)
+        {
+            mIOExpander->interrupt();
+        }
+    }
+    else
+    {
+        if (mController)
+        {
+            mController->onGpioExt(pin);
+        }
     }
 }
 
-void onZeroDetected(int index)
+void onExpanderGpioExt(MCP23017_Pin pin)
 {
     if (mController)
     {
-        mController->onZeroDetected(index);
+        mController->onExpanderGpioExt(pin);
     }
 }
 
-void onControllerInterrupt()
+void onTimerInterrupt()
 {
     if (mController)
     {
-        mController->onControllerInterrupt();
+        mController->onTimerInterrupt();
     }
 }
 
@@ -94,6 +108,11 @@ bool onCommandPosition(string params)
 
 bool onCommandZeroDetect(string params)
 {
+    if (!mIOExpander->isRunning())
+    {
+        println("IO expander error");
+        return false;
+    }
     int index = parseIndex(params);
     if (index != -1)
     {
@@ -120,7 +139,7 @@ bool onCommandForceOutput(string params)
     int index = 0, pwm = 0;
     if (!params.empty() && sscanf(params.c_str(), "%d %d", &index, &pwm) == 2 &&
         index >= 0 && index < SERVO_NUMS &&
-        pwm >= 0 && pwm <= SERVO_PWM_RESOLUTION)
+        pwm >= -SERVO_PWM_RESOLUTION && pwm <= SERVO_PWM_RESOLUTION)
     {
         mController->forceOutput(index, pwm);
         return true;
@@ -206,10 +225,34 @@ void setup(TIM_HandleTypeDef *htim1, TIM_HandleTypeDef *htim2, TIM_HandleTypeDef
     CommandLine::install("debug", onCommandDebug, "debug [index]\t: debug servo at index");
     CommandLine::install("monitor", onCommandMonitor, "monitor -1\t: stop monitor\r\nmonitor [index]\t: monitor servo position at index");
 
+    mI2c = new SoftI2c(SOFT_I2C_SDA_GPIO_Port, SOFT_I2C_SDA_Pin, SOFT_I2C_SCL_GPIO_Port, SOFT_I2C_SCL_Pin);
+    if (!mI2c->begin())
+    {
+        println("Failed to initialize I2C");
+    }
+    else
+    {
+        mIOExpander = new MCP23017(mI2c, MCP23017_ADDRESS, onExpanderGpioExt);
+        for (int i = 0; i < 5; i++)
+        {
+            if (mIOExpander->init())
+            {
+                println("IO expander initialized");
+                break;
+            }
+            println("Failed to initialize IO expander. Retrying...");
+            HAL_Delay(100);
+        }
+    }
+
     mController = new DeviceController(htim1, htim2, htim3, hspi);
 }
 
 void loop()
 {
+    if (mIOExpander)
+    {
+        mIOExpander->run();
+    }
     mController->run();
 }
